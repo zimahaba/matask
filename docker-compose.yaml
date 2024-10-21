@@ -1,0 +1,13 @@
+
+services:
+
+  db:
+    hostname: postgres
+    image: postgres:17
+    restart: always
+    environment:
+      POSTGRES_USER: matask
+      POSTGRES_PASSWORD: matask
+      POSTGRES_DB: matask
+    ports:
+      - "5432:5432"
