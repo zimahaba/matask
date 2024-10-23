@@ -1,7 +1,8 @@
 package models
 
 type Project struct {
-	Id       int
-	Name     string
-	Progress int
+	Id          int
+	Description string
+	Progress    int
+	Task        Task
 }

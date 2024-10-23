@@ -14,32 +14,46 @@ CREATE TABLE matask_user (
 );
 
 CREATE TABLE task (
-    id      SERIAL NOT NULL,
-    name    TEXT   NOT NULL,
+    id      SERIAL    NOT NULL,
+    name    TEXT      NOT NULL,
+    type    TEXT      NOT NULL,
     started DATE,
-    ended   DATE
-    --user_fk SERIAL NOT NULL
-    --created_at timestamp
+    ended   DATE,
+    created TIMESTAMP NOT NULL,
+    updated TIMESTAMP,
+    user_fk SERIAL
 );
 
 CREATE TABLE project (
-    id       SERIAL  NOT NULL,
-    progress INTEGER NOT NULL,
-    task_fk  SERIAL  NOT NULL
+    id             SERIAL  NOT NULL,
+    description    TEXT,
+    progress       INTEGER NOT NULL,
+    dynamic_fields JSONB,
+    task_fk        SERIAL  NOT NULL
 );
 
 CREATE TABLE book (
-    id       SERIAL NOT NULL,
-    progress INTEGER NOT NULL,
-    author   TEXT,
-    task_fk  SERIAL NOT NULL
+    id         SERIAL  NOT NULL,
+    progress   INTEGER NOT NULL,
+    author     TEXT,
+    synopsis   TEXT,
+    comments   TEXT,
+    year       TEXT,
+    rate       INTEGER,
+    cover_path TEXT,
+    task_fk    SERIAL  NOT NULL
 );
 
 CREATE TABLE movie (
-    id       SERIAL NOT NULL,
-    year     TEXT,
-    director TEXT,
-    task_fk  SERIAL NOT NULL
+    id          SERIAL   NOT NULL,
+    synopsis    TEXT,
+    comments    TEXT,
+    year        TEXT,
+    rate        INTEGER,
+    actors      JSONB,
+    director    TEXT,
+    poster_path TEXT,
+    task_fk     SERIAL   NOT NULL
 );
 
 ALTER TABLE task    ADD CONSTRAINT task_pkey    PRIMARY KEY (id);
