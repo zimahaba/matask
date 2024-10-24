@@ -2,7 +2,7 @@ package database
 
 import (
 	"database/sql"
-	"matask/internal/models"
+	"matask/internal/model"
 
 	"github.com/lib/pq"
 )
@@ -16,8 +16,8 @@ var findProjectSql = `
 
 var insertProjectSql = "INSERT INTO project (description, progress, task_fk) VALUES ($1, $2, $3) RETURNING id"
 
-func FindProject(id int, db *sql.DB) models.Project {
-	var p models.Project
+func FindProject(id int, db *sql.DB) model.Project {
+	var p model.Project
 	var started pq.NullTime
 	var ended pq.NullTime
 	if err := db.QueryRow(findProjectSql, id).Scan(&p.Id, &p.Description, &p.Progress, &p.Task.Name, &started, &ended); err != nil {
@@ -32,7 +32,7 @@ func FindProject(id int, db *sql.DB) models.Project {
 	return p
 }
 
-func SaveProject(p models.Project, db *sql.DB) int {
+func SaveProject(p model.Project, db *sql.DB) int {
 	tx, err := db.Begin()
 	if err != nil {
 		panic(err)

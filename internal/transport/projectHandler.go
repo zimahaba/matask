@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"matask/internal/services"
+	"matask/internal/service"
 	"matask/internal/transport/request"
 	"matask/internal/transport/resource"
 	"net/http"
@@ -14,7 +14,7 @@ import (
 func GetProjectHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.Atoi(r.PathValue("id"))
-		p := services.FindProject(id, db)
+		p := service.FindProject(id, db)
 		json.NewEncoder(w).Encode(resource.FromProject(p))
 	}
 }
@@ -29,7 +29,7 @@ func CreateProjectHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		projectId := services.CreateProject(p.ToProject(), db)
+		projectId := service.CreateProject(p.ToProject(), db)
 		json.NewEncoder(w).Encode(resource.IdResource{Id: projectId})
 	}
 }

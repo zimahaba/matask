@@ -1,4 +1,4 @@
-package models
+package model
 
 type MataskUser struct {
 	Id    int

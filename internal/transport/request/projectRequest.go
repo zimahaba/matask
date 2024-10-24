@@ -1,7 +1,7 @@
 package request
 
 import (
-	"matask/internal/models"
+	"matask/internal/model"
 )
 
 type ProjectRequest struct {
@@ -13,12 +13,12 @@ type ProjectRequest struct {
 	Progress    int
 }
 
-func (request ProjectRequest) ToProject() models.Project {
-	task := models.Task{
+func (request ProjectRequest) ToProject() model.Project {
+	task := model.Task{
 		Name: request.Name,
 		Type: request.Type,
 	}
-	return models.Project{
+	return model.Project{
 		Description: request.Description,
 		Progress:    request.Progress,
 		Task:        task,

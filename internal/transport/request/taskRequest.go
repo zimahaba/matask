@@ -1,15 +1,15 @@
 package request
 
 import (
-	"matask/internal/models"
+	"matask/internal/model"
 	"strconv"
 	"time"
 
 	"github.com/lib/pq"
 )
 
-func ToTaskFilter(query map[string][]string) models.TaskFilter {
-	var filter models.TaskFilter
+func ToTaskFilter(query map[string][]string) model.TaskFilter {
+	var filter model.TaskFilter
 	if len(query["name"]) > 0 {
 		filter.Name = query["name"][0]
 	}

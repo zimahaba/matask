@@ -3,7 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"matask/internal/models"
+	"matask/internal/model"
 	"time"
 
 	"github.com/lib/pq"
@@ -22,7 +22,7 @@ var findTasksSql = `
 
 var insertTaskSql = "INSERT INTO task (name, type, started, ended, created) VALUES ($1, $2, $3, $4, $5) RETURNING id"
 
-func FindTasks(f models.TaskFilter, db *sql.DB) []models.Task {
+func FindTasks(f model.TaskFilter, db *sql.DB) []model.Task {
 	fmt.Printf("filter: %v.\n", f)
 	rows, err := db.Query(findTasksSql, f.Name, f.Type, f.Started1, f.Started2, f.Ended1, f.Ended2)
 	if err != nil {
@@ -30,10 +30,10 @@ func FindTasks(f models.TaskFilter, db *sql.DB) []models.Task {
 	}
 	defer rows.Close()
 
-	var tasks []models.Task
+	var tasks []model.Task
 
 	for rows.Next() {
-		var t models.Task
+		var t model.Task
 		var started pq.NullTime
 		var ended pq.NullTime
 		if err := rows.Scan(&t.Id, &t.Name, &t.Type, &started, &ended); err != nil {
@@ -53,7 +53,7 @@ func FindTasks(f models.TaskFilter, db *sql.DB) []models.Task {
 	return tasks
 }
 
-func SaveTask(t models.Task, tx *sql.Tx) int {
+func SaveTask(t model.Task, tx *sql.Tx) int {
 	var started *time.Time
 	if !t.Started.IsZero() {
 		started = &t.Started

@@ -1,7 +1,7 @@
 package resource
 
 import (
-	"matask/internal/models"
+	"matask/internal/model"
 )
 
 type ProjectResource struct {
@@ -13,7 +13,7 @@ type ProjectResource struct {
 	Ended       Date
 }
 
-func FromProject(p models.Project) ProjectResource {
+func FromProject(p model.Project) ProjectResource {
 	return ProjectResource{
 		Id:          p.Id,
 		Name:        p.Task.Name,
