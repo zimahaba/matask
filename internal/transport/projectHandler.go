@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"matask/internal/services"
-	payload "matask/internal/transport/payloads"
-	resource "matask/internal/transport/resources"
+	"matask/internal/transport/request"
+	"matask/internal/transport/resource"
 	"net/http"
 	"strconv"
 )
@@ -22,15 +22,14 @@ func GetProjectHandler(db *sql.DB) http.HandlerFunc {
 func CreateProjectHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		var p payload.ProjectPayload
+		var p request.ProjectRequest
 		err := json.NewDecoder(r.Body).Decode(&p)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		project := payload.ToProject(p)
-		projectId := services.CreateProject(project, db)
+		projectId := services.CreateProject(p.ToProject(), db)
 		json.NewEncoder(w).Encode(resource.IdResource{Id: projectId})
 	}
 }

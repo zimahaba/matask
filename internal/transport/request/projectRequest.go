@@ -1,10 +1,10 @@
-package payload
+package request
 
 import (
 	"matask/internal/models"
 )
 
-type ProjectPayload struct {
+type ProjectRequest struct {
 	Name        string
 	Type        string
 	Started     Date
@@ -13,14 +13,14 @@ type ProjectPayload struct {
 	Progress    int
 }
 
-func ToProject(payload ProjectPayload) models.Project {
+func (request ProjectRequest) ToProject() models.Project {
 	task := models.Task{
-		Name: payload.Name,
-		Type: payload.Type,
+		Name: request.Name,
+		Type: request.Type,
 	}
 	return models.Project{
-		Description: payload.Description,
-		Progress:    payload.Progress,
+		Description: request.Description,
+		Progress:    request.Progress,
 		Task:        task,
 	}
 }
