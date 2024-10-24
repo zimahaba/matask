@@ -23,20 +23,19 @@ func main() {
 	// https://manuel.kiessling.net/2012/09/28/applying-the-clean-architecture-to-go-applications/
 	// 	https://www.willem.dev/articles/url-path-parameters-in-routes/
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /projects/{id}", transport.GetProjectHandler())
-	mux.HandleFunc("GET /projects", transport.GetProjectsPaginatedHandler())
+	mux.HandleFunc("GET /projects/{id}", transport.GetProjectHandler(db))
 	mux.HandleFunc("POST /projects", transport.CreateProjectHandler(db))
 	mux.HandleFunc("PUT /projects/{id}", transport.UpdateProjectHandler())
 
 	mux.HandleFunc("GET /books/{id}", transport.GetBookHandler())
-	mux.HandleFunc("GET /books", transport.GetBooksPaginatedHandler())
 	mux.HandleFunc("POST /books", transport.CreateBookHandler())
 	mux.HandleFunc("PUT /books/{id}", transport.UpdateBookHandler())
 
 	mux.HandleFunc("GET /movies/{id}", transport.GetMovieHandler())
-	mux.HandleFunc("GET /movies", transport.GetMoviesPaginatedHandler())
 	mux.HandleFunc("POST /movies", transport.CreateMovieHandler())
 	mux.HandleFunc("PUT /movies/{id}", transport.UpdateMovieHandler())
+
+	mux.HandleFunc("GET /tasks", transport.GetTasksHandler(db))
 
 	server := http.Server{
 		Addr:    ":8080",

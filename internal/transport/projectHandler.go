@@ -8,20 +8,14 @@ import (
 	payload "matask/internal/transport/payloads"
 	resource "matask/internal/transport/resources"
 	"net/http"
+	"strconv"
 )
 
-func GetProjectHandler() http.HandlerFunc {
+func GetProjectHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id := r.PathValue("id")
-		fmt.Printf("project id: %v", id)
-		fmt.Fprintf(w, "GetProjectHandler")
-	}
-}
-
-func GetProjectsPaginatedHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Print(r.URL.Query().Get("page"))
-		fmt.Fprintf(w, "GetProjectsPaginatedHandler")
+		id, _ := strconv.Atoi(r.PathValue("id"))
+		p := services.FindProject(id, db)
+		json.NewEncoder(w).Encode(resource.FromProject(p))
 	}
 }
 

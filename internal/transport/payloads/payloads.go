@@ -4,11 +4,11 @@ import (
 	"time"
 )
 
-type MataskTime struct {
+type Date struct {
 	time.Time
 }
 
-func (t *MataskTime) UnmarshalJSON(data []byte) error {
+func (d *Date) UnmarshalJSON(data []byte) error {
 	date := string(data)
 	// Ignore null, like in the main JSON package.
 	if date == "null" || date == `""` {
@@ -16,6 +16,6 @@ func (t *MataskTime) UnmarshalJSON(data []byte) error {
 	}
 
 	time, err := time.Parse(time.DateOnly, date[1:len(date)-1])
-	*t = MataskTime{time}
+	*d = Date{time}
 	return err
 }

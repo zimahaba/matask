@@ -19,8 +19,7 @@ CREATE TABLE task (
     type    TEXT      NOT NULL,
     started DATE,
     ended   DATE,
-    created TIMESTAMP NOT NULL,
-    updated TIMESTAMP,
+    created TIMESTAMP NOT NULL
     user_fk SERIAL
 );
 
