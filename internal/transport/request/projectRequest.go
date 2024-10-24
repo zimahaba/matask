@@ -15,8 +15,10 @@ type ProjectRequest struct {
 
 func (request ProjectRequest) ToProject() model.Project {
 	task := model.Task{
-		Name: request.Name,
-		Type: request.Type,
+		Name:    request.Name,
+		Type:    request.Type,
+		Started: request.Started.Time,
+		Ended:   request.Ended.Time,
 	}
 	return model.Project{
 		Description: request.Description,
