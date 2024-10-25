@@ -13,8 +13,11 @@ var findBookSql = `
 	INNER JOIN task t ON t.id = b.task_fk
 	WHERE b.id = $1
 `
+var findBookTaskId = "SELECT t.id FROM book b INNER JOIN task t ON t.id = b.task_fk WHERE b.id = $1"
 
-var insertBookSql = "INSERT INTO book (progress, author, synopsis, comments, year, rate, cover_path, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id"
+var insertBookSql = "INSERT INTO book (progress, author, synopsis, comments, year, rate, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
+
+var updateBookSql = "UPDATE book SET progress = $2, author = $3, synopsis = $4, comments = $5, year = $6, rate = $7 WHERE id = $1"
 
 func FindBook(id int, db *sql.DB) model.Book {
 	var b model.Book
@@ -56,12 +59,20 @@ func FindBook(id int, db *sql.DB) model.Book {
 	return b
 }
 
-func SaveBook(b model.Book, db *sql.DB) int {
+func SaveOrUpdateBook(b model.Book, db *sql.DB) int {
 	tx, err := db.Begin()
 	if err != nil {
 		panic(err)
 	}
 	defer tx.Rollback()
+
+	if b.Id != 0 {
+		var taskId int
+		if err := tx.QueryRow(findBookTaskId, b.Id).Scan(&taskId); err != nil {
+			panic(err)
+		}
+		b.Task.Id = taskId
+	}
 
 	taskId := SaveOrUpdateTask(b.Task, tx)
 
@@ -86,12 +97,20 @@ func SaveBook(b model.Book, db *sql.DB) int {
 	if b.Rate != 0 {
 		rate = sql.NullInt32{Int32: int32(b.Rate), Valid: true}
 	}
-	var coverPath sql.NullString
-	if b.CoverPath != "" {
-		coverPath = sql.NullString{String: b.CoverPath, Valid: true}
+
+	if b.Id == 0 {
+		err = tx.QueryRow(insertBookSql, b.Progress, author, synopsis, comments, year, rate, taskId).Scan(&id)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		_, err = tx.Exec(updateBookSql, b.Id, b.Progress, author, synopsis, comments, year, rate)
+		if err != nil {
+			panic(err)
+		}
+		id = b.Id
 	}
 
-	tx.QueryRow(insertBookSql, b.Progress, author, synopsis, comments, year, rate, coverPath, taskId).Scan(&id)
 	if err = tx.Commit(); err != nil {
 		panic(err)
 	}

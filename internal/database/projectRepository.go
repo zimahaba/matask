@@ -49,7 +49,7 @@ func SaveOrUpdateProject(p model.Project, db *sql.DB) int {
 
 	if p.Id != 0 {
 		var taskId int
-		if err := db.QueryRow(findProjectTaskId, p.Id).Scan(&taskId); err != nil {
+		if err := tx.QueryRow(findProjectTaskId, p.Id).Scan(&taskId); err != nil {
 			panic(err)
 		}
 		p.Task.Id = taskId
@@ -64,7 +64,10 @@ func SaveOrUpdateProject(p model.Project, db *sql.DB) int {
 	}
 
 	if p.Id == 0 {
-		tx.QueryRow(insertProjectSql, description, p.Progress, taskId).Scan(&id)
+		err = tx.QueryRow(insertProjectSql, description, p.Progress, taskId).Scan(&id)
+		if err != nil {
+			panic(err)
+		}
 	} else {
 		_, err = tx.Exec(updateProjectSql, p.Id, description, p.Progress)
 		if err != nil {

@@ -10,6 +10,6 @@ func FindBook(id int, db *sql.DB) model.Book {
 	return database.FindBook(id, db)
 }
 
-func CreateBook(p model.Book, db *sql.DB) int {
-	return database.SaveBook(p, db)
+func SaveOrUpdateBook(p model.Book, db *sql.DB) int {
+	return database.SaveOrUpdateBook(p, db)
 }

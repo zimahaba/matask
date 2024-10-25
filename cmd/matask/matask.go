@@ -29,7 +29,7 @@ func main() {
 
 	mux.HandleFunc("GET /books/{id}", transport.GetBookHandler(db))
 	mux.HandleFunc("POST /books", transport.CreateBookHandler(db))
-	mux.HandleFunc("PUT /books/{id}", transport.UpdateBookHandler())
+	mux.HandleFunc("PUT /books/{id}", transport.UpdateBookHandler(db))
 
 	mux.HandleFunc("GET /movies/{id}", transport.GetMovieHandler(db))
 	mux.HandleFunc("POST /movies", transport.CreateMovieHandler(db))

@@ -29,13 +29,23 @@ func CreateBookHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		bookId := service.CreateBook(b.ToBook(), db)
+		bookId := service.SaveOrUpdateBook(b.ToBook(), db)
 		json.NewEncoder(w).Encode(resource.IdResource{Id: bookId})
 	}
 }
 
-func UpdateBookHandler() http.HandlerFunc {
+func UpdateBookHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "UpdateBookHandler")
+		id, _ := strconv.Atoi(r.PathValue("id"))
+		var b request.BookRequest
+		err := json.NewDecoder(r.Body).Decode(&b)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		book := b.ToBook()
+		book.Id = id
+		service.SaveOrUpdateBook(book, db)
+		fmt.Fprintf(w, "")
 	}
 }

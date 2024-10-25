@@ -1,0 +1,1 @@
+# A simple CRUD API to manage personal projects and activities.
