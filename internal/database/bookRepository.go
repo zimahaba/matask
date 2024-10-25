@@ -66,7 +66,32 @@ func SaveBook(b model.Book, db *sql.DB) int {
 	taskId := SaveTask(b.Task, tx)
 
 	var id int
-	tx.QueryRow(insertBookSql, b.Progress, b.Author, b.Synopsis, b.Comments, b.Year, b.Rate, b.CoverPath, taskId).Scan(&id)
+	var author sql.NullString
+	if b.Author != "" {
+		author = sql.NullString{String: b.Author, Valid: true}
+	}
+	var synopsis sql.NullString
+	if b.Synopsis != "" {
+		synopsis = sql.NullString{String: b.Synopsis, Valid: true}
+	}
+	var comments sql.NullString
+	if b.Comments != "" {
+		comments = sql.NullString{String: b.Comments, Valid: true}
+	}
+	var year sql.NullString
+	if b.Year != "" {
+		year = sql.NullString{String: b.Year, Valid: true}
+	}
+	var rate sql.NullInt32
+	if b.Rate != 0 {
+		rate = sql.NullInt32{Int32: int32(b.Rate), Valid: true}
+	}
+	var coverPath sql.NullString
+	if b.CoverPath != "" {
+		coverPath = sql.NullString{String: b.CoverPath, Valid: true}
+	}
+
+	tx.QueryRow(insertBookSql, b.Progress, author, synopsis, comments, year, rate, coverPath, taskId).Scan(&id)
 	if err = tx.Commit(); err != nil {
 		panic(err)
 	}

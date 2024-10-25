@@ -68,7 +68,31 @@ func SaveMovie(m model.Movie, db *sql.DB) int {
 	fmt.Printf("movie: %v.\n", m)
 
 	var id int
-	tx.QueryRow(insertMovieSql, m.Synopsis, m.Comments, m.Year, m.Rate, m.Director, m.PosterPath, taskId).Scan(&id)
+	var synopsis sql.NullString
+	if m.Synopsis != "" {
+		synopsis = sql.NullString{String: m.Synopsis, Valid: true}
+	}
+	var comments sql.NullString
+	if m.Comments != "" {
+		comments = sql.NullString{String: m.Comments, Valid: true}
+	}
+	var year sql.NullString
+	if m.Year != "" {
+		year = sql.NullString{String: m.Year, Valid: true}
+	}
+	var rate sql.NullInt32
+	if m.Rate != 0 {
+		rate = sql.NullInt32{Int32: int32(m.Rate), Valid: true}
+	}
+	var director sql.NullString
+	if m.Director != "" {
+		director = sql.NullString{String: m.Director, Valid: true}
+	}
+	var posterPath sql.NullString
+	if m.PosterPath != "" {
+		posterPath = sql.NullString{String: m.PosterPath, Valid: true}
+	}
+	tx.QueryRow(insertMovieSql, synopsis, comments, year, rate, director, posterPath, taskId).Scan(&id)
 	if err = tx.Commit(); err != nil {
 		panic(err)
 	}

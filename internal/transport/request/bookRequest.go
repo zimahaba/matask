@@ -6,7 +6,6 @@ import (
 
 type BookRequest struct {
 	Name     string
-	Type     string
 	Started  Date
 	Ended    Date
 	Progress int
@@ -21,7 +20,7 @@ type BookRequest struct {
 func (request BookRequest) ToBook() model.Book {
 	task := model.Task{
 		Name:    request.Name,
-		Type:    request.Type,
+		Type:    "book",
 		Started: request.Started.Time,
 		Ended:   request.Ended.Time,
 	}

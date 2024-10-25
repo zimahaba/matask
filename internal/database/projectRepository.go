@@ -18,10 +18,14 @@ var insertProjectSql = "INSERT INTO project (description, progress, task_fk) VAL
 
 func FindProject(id int, db *sql.DB) model.Project {
 	var p model.Project
+	var description sql.NullString
 	var started pq.NullTime
 	var ended pq.NullTime
-	if err := db.QueryRow(findProjectSql, id).Scan(&p.Id, &p.Description, &p.Progress, &p.Task.Name, &started, &ended); err != nil {
+	if err := db.QueryRow(findProjectSql, id).Scan(&p.Id, &description, &p.Progress, &p.Task.Name, &started, &ended); err != nil {
 		panic(err)
+	}
+	if description.Valid {
+		p.Description = description.String
 	}
 	if started.Valid {
 		p.Task.Started = started.Time
@@ -42,7 +46,12 @@ func SaveProject(p model.Project, db *sql.DB) int {
 	taskId := SaveTask(p.Task, tx)
 
 	var id int
-	tx.QueryRow(insertProjectSql, p.Description, p.Progress, taskId).Scan(&id)
+	var description sql.NullString
+	if p.Description != "" {
+		description = sql.NullString{String: p.Description, Valid: true}
+	}
+
+	tx.QueryRow(insertProjectSql, description, p.Progress, taskId).Scan(&id)
 	if err = tx.Commit(); err != nil {
 		panic(err)
 	}

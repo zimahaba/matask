@@ -6,7 +6,6 @@ import (
 
 type MovieRequest struct {
 	Name     string
-	Type     string
 	Started  Date
 	Ended    Date
 	Synopsis string
@@ -20,7 +19,7 @@ type MovieRequest struct {
 func (request MovieRequest) ToMovie() model.Movie {
 	task := model.Task{
 		Name:    request.Name,
-		Type:    request.Type,
+		Type:    "movie",
 		Started: request.Started.Time,
 		Ended:   request.Ended.Time,
 	}

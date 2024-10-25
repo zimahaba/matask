@@ -6,7 +6,6 @@ import (
 
 type ProjectRequest struct {
 	Name        string
-	Type        string
 	Started     Date
 	Ended       Date
 	Description string
@@ -16,7 +15,7 @@ type ProjectRequest struct {
 func (request ProjectRequest) ToProject() model.Project {
 	task := model.Task{
 		Name:    request.Name,
-		Type:    request.Type,
+		Type:    "project",
 		Started: request.Started.Time,
 		Ended:   request.Ended.Time,
 	}
