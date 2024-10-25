@@ -48,3 +48,11 @@ func UpdateProjectHandler(db *sql.DB) http.HandlerFunc {
 		fmt.Fprintf(w, "")
 	}
 }
+
+func DeleteProjectHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.Atoi(r.PathValue("id"))
+		service.DeleteProject(id, db)
+		fmt.Fprintf(w, "")
+	}
+}

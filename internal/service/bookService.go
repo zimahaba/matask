@@ -13,3 +13,7 @@ func FindBook(id int, db *sql.DB) model.Book {
 func SaveOrUpdateBook(p model.Book, db *sql.DB) int {
 	return database.SaveOrUpdateBook(p, db)
 }
+
+func DeleteBook(bookId int, db *sql.DB) {
+	database.DeleteTaskCascade(bookId, "book", db)
+}

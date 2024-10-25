@@ -26,14 +26,17 @@ func main() {
 	mux.HandleFunc("GET /projects/{id}", transport.GetProjectHandler(db))
 	mux.HandleFunc("POST /projects", transport.CreateProjectHandler(db))
 	mux.HandleFunc("PUT /projects/{id}", transport.UpdateProjectHandler(db))
+	mux.HandleFunc("DELETE /projects/{id}", transport.DeleteProjectHandler(db))
 
 	mux.HandleFunc("GET /books/{id}", transport.GetBookHandler(db))
 	mux.HandleFunc("POST /books", transport.CreateBookHandler(db))
 	mux.HandleFunc("PUT /books/{id}", transport.UpdateBookHandler(db))
+	mux.HandleFunc("DELETE /books/{id}", transport.DeleteBookHandler(db))
 
 	mux.HandleFunc("GET /movies/{id}", transport.GetMovieHandler(db))
 	mux.HandleFunc("POST /movies", transport.CreateMovieHandler(db))
 	mux.HandleFunc("PUT /movies/{id}", transport.UpdateMovieHandler(db))
+	mux.HandleFunc("DELETE /movies/{id}", transport.DeleteMovieHandler(db))
 
 	mux.HandleFunc("GET /tasks", transport.GetTasksHandler(db))
 

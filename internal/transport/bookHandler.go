@@ -49,3 +49,11 @@ func UpdateBookHandler(db *sql.DB) http.HandlerFunc {
 		fmt.Fprintf(w, "")
 	}
 }
+
+func DeleteBookHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.Atoi(r.PathValue("id"))
+		service.DeleteBook(id, db)
+		fmt.Fprintf(w, "")
+	}
+}

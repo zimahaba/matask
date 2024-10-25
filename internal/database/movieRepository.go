@@ -7,18 +7,18 @@ import (
 	"github.com/lib/pq"
 )
 
-var findMovieSql = `
-	SELECT m.id, m.synopsis, m.comments, m.year, m.rate, m.director, m.poster_path, t.name, t.started, t.ended 
-	FROM movie m
-	INNER JOIN task t ON t.id = m.task_fk
-	WHERE m.id = $1
-`
-
-var findMovieTaskId = "SELECT t.id FROM movie m INNER JOIN task t ON t.id = m.task_fk WHERE m.id = $1"
-
-var insertMovieSql = "INSERT INTO movie (synopsis, comments, year, rate, director, poster_path, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
-
-var updateMovieSql = "UPDATE movie SET synopsis = $2, comments = $3, year = $4, rate = $5, director = $6 WHERE id = $1"
+const (
+	findMovieSql = `
+		SELECT m.id, m.synopsis, m.comments, m.year, m.rate, m.director, m.poster_path, t.name, t.started, t.ended 
+		FROM movie m
+		INNER JOIN task t ON t.id = m.task_fk
+		WHERE m.id = $1
+	`
+	findMovieTaskIdSql = "SELECT t.id FROM movie m INNER JOIN task t ON t.id = m.task_fk WHERE m.id = $1"
+	insertMovieSql     = "INSERT INTO movie (synopsis, comments, year, rate, director, poster_path, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
+	updateMovieSql     = "UPDATE movie SET synopsis = $2, comments = $3, year = $4, rate = $5, director = $6 WHERE id = $1"
+	deleteMovieSql     = "DELETE FROM movie WHERE id = $1"
+)
 
 func FindMovie(id int, db *sql.DB) model.Movie {
 	var m model.Movie
@@ -69,7 +69,7 @@ func SaveOrUpdateMovie(m model.Movie, db *sql.DB) int {
 
 	if m.Id != 0 {
 		var taskId int
-		if err := tx.QueryRow(findMovieTaskId, m.Id).Scan(&taskId); err != nil {
+		if err := tx.QueryRow(findMovieTaskIdSql, m.Id).Scan(&taskId); err != nil {
 			panic(err)
 		}
 		m.Task.Id = taskId

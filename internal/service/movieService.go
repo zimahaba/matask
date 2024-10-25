@@ -13,3 +13,7 @@ func FindMovie(id int, db *sql.DB) model.Movie {
 func SaveOrUpdateMovie(p model.Movie, db *sql.DB) int {
 	return database.SaveOrUpdateMovie(p, db)
 }
+
+func DeleteMovie(movieId int, db *sql.DB) {
+	database.DeleteTaskCascade(movieId, "movie", db)
+}

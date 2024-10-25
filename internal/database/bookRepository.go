@@ -7,17 +7,18 @@ import (
 	"github.com/lib/pq"
 )
 
-var findBookSql = `
-	SELECT b.id, b.progress, b.author, b.synopsis, b.comments, b.year, b.rate, b.cover_path, t.name, t.started, t.ended 
-	FROM book b
-	INNER JOIN task t ON t.id = b.task_fk
-	WHERE b.id = $1
-`
-var findBookTaskId = "SELECT t.id FROM book b INNER JOIN task t ON t.id = b.task_fk WHERE b.id = $1"
-
-var insertBookSql = "INSERT INTO book (progress, author, synopsis, comments, year, rate, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
-
-var updateBookSql = "UPDATE book SET progress = $2, author = $3, synopsis = $4, comments = $5, year = $6, rate = $7 WHERE id = $1"
+const (
+	findBookSql = `
+		SELECT b.id, b.progress, b.author, b.synopsis, b.comments, b.year, b.rate, b.cover_path, t.name, t.started, t.ended 
+		FROM book b
+		INNER JOIN task t ON t.id = b.task_fk
+		WHERE b.id = $1
+	`
+	findBookTaskIdSql = "SELECT t.id FROM book b INNER JOIN task t ON t.id = b.task_fk WHERE b.id = $1"
+	insertBookSql     = "INSERT INTO book (progress, author, synopsis, comments, year, rate, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
+	updateBookSql     = "UPDATE book SET progress = $2, author = $3, synopsis = $4, comments = $5, year = $6, rate = $7 WHERE id = $1"
+	deleteBookSql     = "DELETE FROM book WHERE id = $1"
+)
 
 func FindBook(id int, db *sql.DB) model.Book {
 	var b model.Book
@@ -68,7 +69,7 @@ func SaveOrUpdateBook(b model.Book, db *sql.DB) int {
 
 	if b.Id != 0 {
 		var taskId int
-		if err := tx.QueryRow(findBookTaskId, b.Id).Scan(&taskId); err != nil {
+		if err := tx.QueryRow(findBookTaskIdSql, b.Id).Scan(&taskId); err != nil {
 			panic(err)
 		}
 		b.Task.Id = taskId

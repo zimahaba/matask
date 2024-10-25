@@ -7,18 +7,18 @@ import (
 	"github.com/lib/pq"
 )
 
-var findProjectSql = `
-	SELECT p.id, p.description, p.progress, t.id, t.name, t.type, t.started, t.ended 
-	FROM project p
-	INNER JOIN task t ON t.id = p.task_fk
-	WHERE p.id = $1
-`
-
-var findProjectTaskId = "SELECT t.id FROM project p INNER JOIN task t ON t.id = p.task_fk WHERE p.id = $1"
-
-var insertProjectSql = "INSERT INTO project (description, progress, task_fk) VALUES ($1, $2, $3) RETURNING id"
-
-var updateProjectSql = "UPDATE project SET description = $2, progress = $3 WHERE id = $1"
+const (
+	findProjectSql = `
+		SELECT p.id, p.description, p.progress, t.id, t.name, t.type, t.started, t.ended 
+		FROM project p
+		INNER JOIN task t ON t.id = p.task_fk
+		WHERE p.id = $1
+	`
+	findProjectTaskIdSql = "SELECT t.id FROM project p INNER JOIN task t ON t.id = p.task_fk WHERE p.id = $1"
+	insertProjectSql     = "INSERT INTO project (description, progress, task_fk) VALUES ($1, $2, $3) RETURNING id"
+	updateProjectSql     = "UPDATE project SET description = $2, progress = $3 WHERE id = $1"
+	deleteProjectSql     = "DELETE FROM project WHERE id = $1"
+)
 
 func FindProject(id int, db *sql.DB) model.Project {
 	var p model.Project
@@ -49,7 +49,7 @@ func SaveOrUpdateProject(p model.Project, db *sql.DB) int {
 
 	if p.Id != 0 {
 		var taskId int
-		if err := tx.QueryRow(findProjectTaskId, p.Id).Scan(&taskId); err != nil {
+		if err := tx.QueryRow(findProjectTaskIdSql, p.Id).Scan(&taskId); err != nil {
 			panic(err)
 		}
 		p.Task.Id = taskId

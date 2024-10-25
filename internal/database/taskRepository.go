@@ -8,20 +8,21 @@ import (
 	"github.com/lib/pq"
 )
 
-var findTasksSql = `
-	SELECT t.id, t.name, t.type, t.started, t.ended
-	FROM task t
-	WHERE ($1 = '' OR UPPER(t.name) like '%' || UPPER($1) || '%')
-	AND ($2 = '' OR t.type = $2)
-	AND (CAST($3 AS DATE) IS NULL OR t.started >= CAST($3 AS DATE))
-	AND (CAST($4 AS DATE) IS NULL OR t.started <= CAST($4 AS DATE))
-	AND (CAST($5 AS DATE) IS NULL OR (t.ended >= CAST($5 AS DATE) OR t.ended IS NULL))
-	AND (CAST($6 AS DATE) IS NULL OR (t.ended <= CAST($6 AS DATE) OR t.ended IS NULL))
-`
-
-var insertTaskSql = "INSERT INTO task (name, type, started, ended, created) VALUES ($1, $2, $3, $4, $5) RETURNING id"
-
-var updateTaskSql = "UPDATE task SET name = $2, started = $3, ended = $4 WHERE id = $1"
+const (
+	findTasksSql = `
+		SELECT t.id, t.name, t.type, t.started, t.ended
+		FROM task t
+		WHERE ($1 = '' OR UPPER(t.name) like '%' || UPPER($1) || '%')
+		AND ($2 = '' OR t.type = $2)
+		AND (CAST($3 AS DATE) IS NULL OR t.started >= CAST($3 AS DATE))
+		AND (CAST($4 AS DATE) IS NULL OR t.started <= CAST($4 AS DATE))
+		AND (CAST($5 AS DATE) IS NULL OR (t.ended >= CAST($5 AS DATE) OR t.ended IS NULL))
+		AND (CAST($6 AS DATE) IS NULL OR (t.ended <= CAST($6 AS DATE) OR t.ended IS NULL))
+	`
+	insertTaskSql = "INSERT INTO task (name, type, started, ended, created) VALUES ($1, $2, $3, $4, $5) RETURNING id"
+	updateTaskSql = "UPDATE task SET name = $2, started = $3, ended = $4 WHERE id = $1"
+	deleteTaskSql = "DELETE FROM task WHERE id = $1"
+)
 
 func FindTasks(f model.TaskFilter, db *sql.DB) []model.Task {
 	rows, err := db.Query(findTasksSql, f.Name, f.Type, f.Started1, f.Started2, f.Ended1, f.Ended2)
@@ -77,4 +78,42 @@ func SaveOrUpdateTask(t model.Task, tx *sql.Tx) int {
 		panic(err)
 	}
 	return id
+}
+
+func DeleteTaskCascade(childId int, childType string, db *sql.DB) {
+	var findTaskIdSql string
+	var deleteChildSql string
+	if childType == "project" {
+		findTaskIdSql = findProjectTaskIdSql
+		deleteChildSql = deleteProjectSql
+	} else if childType == "book" {
+		findTaskIdSql = findBookTaskIdSql
+		deleteChildSql = deleteBookSql
+	} else if childType == "movie" {
+		findTaskIdSql = findMovieTaskIdSql
+		deleteChildSql = deleteMovieSql
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		panic(err)
+	}
+	defer tx.Rollback()
+
+	var taskId int
+	if err := tx.QueryRow(findTaskIdSql, childId).Scan(&taskId); err != nil {
+		panic(err)
+	}
+	_, err = tx.Exec(deleteChildSql, childId)
+	if err != nil {
+		panic(err)
+	}
+	_, err = tx.Exec(deleteTaskSql, taskId)
+	if err != nil {
+		panic(err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		panic(err)
+	}
 }

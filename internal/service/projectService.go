@@ -13,3 +13,7 @@ func FindProject(id int, db *sql.DB) model.Project {
 func SaveOrUpdateProject(p model.Project, db *sql.DB) int {
 	return database.SaveOrUpdateProject(p, db)
 }
+
+func DeleteProject(projectId int, db *sql.DB) {
+	database.DeleteTaskCascade(projectId, "project", db)
+}
