@@ -14,7 +14,11 @@ var findMovieSql = `
 	WHERE m.id = $1
 `
 
+var findMovieTaskId = "SELECT t.id FROM movie m INNER JOIN task t ON t.id = m.task_fk WHERE m.id = $1"
+
 var insertMovieSql = "INSERT INTO movie (synopsis, comments, year, rate, director, poster_path, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
+
+var updateMovieSql = "UPDATE movie SET synopsis = $2, comments = $3, year = $4, rate = $5, director = $6 WHERE id = $1"
 
 func FindMovie(id int, db *sql.DB) model.Movie {
 	var m model.Movie
@@ -56,12 +60,20 @@ func FindMovie(id int, db *sql.DB) model.Movie {
 	return m
 }
 
-func SaveMovie(m model.Movie, db *sql.DB) int {
+func SaveOrUpdateMovie(m model.Movie, db *sql.DB) int {
 	tx, err := db.Begin()
 	if err != nil {
 		panic(err)
 	}
 	defer tx.Rollback()
+
+	if m.Id != 0 {
+		var taskId int
+		if err := tx.QueryRow(findMovieTaskId, m.Id).Scan(&taskId); err != nil {
+			panic(err)
+		}
+		m.Task.Id = taskId
+	}
 
 	taskId := SaveOrUpdateTask(m.Task, tx)
 
@@ -90,7 +102,20 @@ func SaveMovie(m model.Movie, db *sql.DB) int {
 	if m.PosterPath != "" {
 		posterPath = sql.NullString{String: m.PosterPath, Valid: true}
 	}
-	tx.QueryRow(insertMovieSql, synopsis, comments, year, rate, director, posterPath, taskId).Scan(&id)
+
+	if m.Id == 0 {
+		tx.QueryRow(insertMovieSql, synopsis, comments, year, rate, director, posterPath, taskId).Scan(&id)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		_, err = tx.Exec(updateMovieSql, m.Id, synopsis, comments, year, rate, director)
+		if err != nil {
+			panic(err)
+		}
+		id = m.Id
+	}
+
 	if err = tx.Commit(); err != nil {
 		panic(err)
 	}

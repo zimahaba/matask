@@ -29,13 +29,23 @@ func CreateMovieHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		movieId := service.CreateMovie(m.ToMovie(), db)
+		movieId := service.SaveOrUpdateMovie(m.ToMovie(), db)
 		json.NewEncoder(w).Encode(resource.IdResource{Id: movieId})
 	}
 }
 
-func UpdateMovieHandler() http.HandlerFunc {
+func UpdateMovieHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "UpdateMovieHandler")
+		id, _ := strconv.Atoi(r.PathValue("id"))
+		var m request.MovieRequest
+		err := json.NewDecoder(r.Body).Decode(&m)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		movie := m.ToMovie()
+		movie.Id = id
+		service.SaveOrUpdateMovie(movie, db)
+		fmt.Fprintf(w, "")
 	}
 }

@@ -33,7 +33,7 @@ func main() {
 
 	mux.HandleFunc("GET /movies/{id}", transport.GetMovieHandler(db))
 	mux.HandleFunc("POST /movies", transport.CreateMovieHandler(db))
-	mux.HandleFunc("PUT /movies/{id}", transport.UpdateMovieHandler())
+	mux.HandleFunc("PUT /movies/{id}", transport.UpdateMovieHandler(db))
 
 	mux.HandleFunc("GET /tasks", transport.GetTasksHandler(db))
 

@@ -10,6 +10,6 @@ func FindMovie(id int, db *sql.DB) model.Movie {
 	return database.FindMovie(id, db)
 }
 
-func CreateMovie(p model.Movie, db *sql.DB) int {
-	return database.SaveMovie(p, db)
+func SaveOrUpdateMovie(p model.Movie, db *sql.DB) int {
+	return database.SaveOrUpdateMovie(p, db)
 }
