@@ -2,7 +2,6 @@ package database
 
 import (
 	"database/sql"
-	"fmt"
 	"matask/internal/model"
 	"time"
 
@@ -22,8 +21,9 @@ var findTasksSql = `
 
 var insertTaskSql = "INSERT INTO task (name, type, started, ended, created) VALUES ($1, $2, $3, $4, $5) RETURNING id"
 
+var updateTaskSql = "UPDATE task SET name = $2, started = $3, ended = $4 WHERE id = $1"
+
 func FindTasks(f model.TaskFilter, db *sql.DB) []model.Task {
-	fmt.Printf("filter: %v.\n", f)
 	rows, err := db.Query(findTasksSql, f.Name, f.Type, f.Started1, f.Started2, f.Ended1, f.Ended2)
 	if err != nil {
 		panic(err)
@@ -53,7 +53,7 @@ func FindTasks(f model.TaskFilter, db *sql.DB) []model.Task {
 	return tasks
 }
 
-func SaveTask(t model.Task, tx *sql.Tx) int {
+func SaveOrUpdateTask(t model.Task, tx *sql.Tx) int {
 	var started *time.Time
 	if !t.Started.IsZero() {
 		started = &t.Started
@@ -65,7 +65,14 @@ func SaveTask(t model.Task, tx *sql.Tx) int {
 
 	now := time.Now()
 	var id int
-	err := tx.QueryRow(insertTaskSql, t.Name, t.Type, started, ended, now).Scan(&id)
+	var err error
+	if t.Id == 0 {
+		err = tx.QueryRow(insertTaskSql, t.Name, t.Type, started, ended, now).Scan(&id)
+	} else {
+		_, err = tx.Exec(updateTaskSql, t.Id, t.Name, started, ended)
+		id = t.Id
+	}
+
 	if err != nil {
 		panic(err)
 	}

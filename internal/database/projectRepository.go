@@ -8,20 +8,24 @@ import (
 )
 
 var findProjectSql = `
-	SELECT p.id, p.description, p.progress, t.name, t.started, t.ended 
+	SELECT p.id, p.description, p.progress, t.id, t.name, t.type, t.started, t.ended 
 	FROM project p
 	INNER JOIN task t ON t.id = p.task_fk
 	WHERE p.id = $1
 `
 
+var findProjectTaskId = "SELECT t.id FROM project p INNER JOIN task t ON t.id = p.task_fk WHERE p.id = $1"
+
 var insertProjectSql = "INSERT INTO project (description, progress, task_fk) VALUES ($1, $2, $3) RETURNING id"
+
+var updateProjectSql = "UPDATE project SET description = $2, progress = $3 WHERE id = $1"
 
 func FindProject(id int, db *sql.DB) model.Project {
 	var p model.Project
 	var description sql.NullString
 	var started pq.NullTime
 	var ended pq.NullTime
-	if err := db.QueryRow(findProjectSql, id).Scan(&p.Id, &description, &p.Progress, &p.Task.Name, &started, &ended); err != nil {
+	if err := db.QueryRow(findProjectSql, id).Scan(&p.Id, &description, &p.Progress, &p.Task.Id, &p.Task.Name, &p.Task.Type, &started, &ended); err != nil {
 		panic(err)
 	}
 	if description.Valid {
@@ -36,14 +40,22 @@ func FindProject(id int, db *sql.DB) model.Project {
 	return p
 }
 
-func SaveProject(p model.Project, db *sql.DB) int {
+func SaveOrUpdateProject(p model.Project, db *sql.DB) int {
 	tx, err := db.Begin()
 	if err != nil {
 		panic(err)
 	}
 	defer tx.Rollback()
 
-	taskId := SaveTask(p.Task, tx)
+	if p.Id != 0 {
+		var taskId int
+		if err := db.QueryRow(findProjectTaskId, p.Id).Scan(&taskId); err != nil {
+			panic(err)
+		}
+		p.Task.Id = taskId
+	}
+
+	taskId := SaveOrUpdateTask(p.Task, tx)
 
 	var id int
 	var description sql.NullString
@@ -51,7 +63,16 @@ func SaveProject(p model.Project, db *sql.DB) int {
 		description = sql.NullString{String: p.Description, Valid: true}
 	}
 
-	tx.QueryRow(insertProjectSql, description, p.Progress, taskId).Scan(&id)
+	if p.Id == 0 {
+		tx.QueryRow(insertProjectSql, description, p.Progress, taskId).Scan(&id)
+	} else {
+		_, err = tx.Exec(updateProjectSql, p.Id, description, p.Progress)
+		if err != nil {
+			panic(err)
+		}
+		id = p.Id
+	}
+
 	if err = tx.Commit(); err != nil {
 		panic(err)
 	}

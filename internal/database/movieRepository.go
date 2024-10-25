@@ -2,7 +2,6 @@ package database
 
 import (
 	"database/sql"
-	"fmt"
 	"matask/internal/model"
 
 	"github.com/lib/pq"
@@ -64,8 +63,7 @@ func SaveMovie(m model.Movie, db *sql.DB) int {
 	}
 	defer tx.Rollback()
 
-	taskId := SaveTask(m.Task, tx)
-	fmt.Printf("movie: %v.\n", m)
+	taskId := SaveOrUpdateTask(m.Task, tx)
 
 	var id int
 	var synopsis sql.NullString

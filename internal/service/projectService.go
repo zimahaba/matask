@@ -10,6 +10,6 @@ func FindProject(id int, db *sql.DB) model.Project {
 	return database.FindProject(id, db)
 }
 
-func CreateProject(p model.Project, db *sql.DB) int {
-	return database.SaveProject(p, db)
+func SaveOrUpdateProject(p model.Project, db *sql.DB) int {
+	return database.SaveOrUpdateProject(p, db)
 }

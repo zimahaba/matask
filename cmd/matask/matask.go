@@ -25,7 +25,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /projects/{id}", transport.GetProjectHandler(db))
 	mux.HandleFunc("POST /projects", transport.CreateProjectHandler(db))
-	mux.HandleFunc("PUT /projects/{id}", transport.UpdateProjectHandler())
+	mux.HandleFunc("PUT /projects/{id}", transport.UpdateProjectHandler(db))
 
 	mux.HandleFunc("GET /books/{id}", transport.GetBookHandler(db))
 	mux.HandleFunc("POST /books", transport.CreateBookHandler(db))

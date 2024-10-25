@@ -2,7 +2,6 @@ package resource
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 )
 
@@ -15,7 +14,6 @@ type Date struct {
 }
 
 func (d Date) MarshalJSON() ([]byte, error) {
-	fmt.Printf("date %v", d.Format(time.DateOnly))
 	if d.Time.IsZero() {
 		return json.Marshal("")
 	}

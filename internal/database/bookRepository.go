@@ -63,7 +63,7 @@ func SaveBook(b model.Book, db *sql.DB) int {
 	}
 	defer tx.Rollback()
 
-	taskId := SaveTask(b.Task, tx)
+	taskId := SaveOrUpdateTask(b.Task, tx)
 
 	var id int
 	var author sql.NullString
