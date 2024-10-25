@@ -1,6 +1,7 @@
 package resource
 
 import (
+	"fmt"
 	"matask/internal/model"
 )
 
@@ -14,10 +15,11 @@ type MovieResource struct {
 	Year     string
 	Rate     int
 	Director string
-	//CoverImage
+	Actors   []string
 }
 
 func FromMovie(m model.Movie) MovieResource {
+	fmt.Printf("actors: %v.\n", m.Actors)
 	return MovieResource{
 		Id:       m.Id,
 		Name:     m.Task.Name,
@@ -28,6 +30,6 @@ func FromMovie(m model.Movie) MovieResource {
 		Year:     m.Year,
 		Rate:     m.Rate,
 		Director: m.Director,
-		//CoverImage
+		Actors:   m.Actors.Actors,
 	}
 }

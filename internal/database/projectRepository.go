@@ -9,14 +9,14 @@ import (
 
 const (
 	findProjectSql = `
-		SELECT p.id, p.description, p.progress, t.id, t.name, t.type, t.started, t.ended 
+		SELECT p.id, p.description, p.progress, p.dynamic_fields, t.id, t.name, t.type, t.started, t.ended 
 		FROM project p
 		INNER JOIN task t ON t.id = p.task_fk
 		WHERE p.id = $1
 	`
 	findProjectTaskIdSql = "SELECT t.id FROM project p INNER JOIN task t ON t.id = p.task_fk WHERE p.id = $1"
-	insertProjectSql     = "INSERT INTO project (description, progress, task_fk) VALUES ($1, $2, $3) RETURNING id"
-	updateProjectSql     = "UPDATE project SET description = $2, progress = $3 WHERE id = $1"
+	insertProjectSql     = "INSERT INTO project (description, progress, dynamic_fields, task_fk) VALUES ($1, $2, $3, $4) RETURNING id"
+	updateProjectSql     = "UPDATE project SET description = $2, progress = $3, dynamic_fields = $4 WHERE id = $1"
 	deleteProjectSql     = "DELETE FROM project WHERE id = $1"
 )
 
@@ -25,7 +25,7 @@ func FindProject(id int, db *sql.DB) model.Project {
 	var description sql.NullString
 	var started pq.NullTime
 	var ended pq.NullTime
-	if err := db.QueryRow(findProjectSql, id).Scan(&p.Id, &description, &p.Progress, &p.Task.Id, &p.Task.Name, &p.Task.Type, &started, &ended); err != nil {
+	if err := db.QueryRow(findProjectSql, id).Scan(&p.Id, &description, &p.Progress, &p.DynamicFields, &p.Task.Id, &p.Task.Name, &p.Task.Type, &started, &ended); err != nil {
 		panic(err)
 	}
 	if description.Valid {
@@ -64,12 +64,12 @@ func SaveOrUpdateProject(p model.Project, db *sql.DB) int {
 	}
 
 	if p.Id == 0 {
-		err = tx.QueryRow(insertProjectSql, description, p.Progress, taskId).Scan(&id)
+		err = tx.QueryRow(insertProjectSql, description, p.Progress, p.DynamicFields, taskId).Scan(&id)
 		if err != nil {
 			panic(err)
 		}
 	} else {
-		_, err = tx.Exec(updateProjectSql, p.Id, description, p.Progress)
+		_, err = tx.Exec(updateProjectSql, p.Id, description, p.Progress, p.DynamicFields)
 		if err != nil {
 			panic(err)
 		}

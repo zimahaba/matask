@@ -13,7 +13,7 @@ type MovieRequest struct {
 	Year     string
 	Rate     int
 	Director string
-	//PosterImage
+	Actors   []string
 }
 
 func (request MovieRequest) ToMovie() model.Movie {
@@ -29,7 +29,7 @@ func (request MovieRequest) ToMovie() model.Movie {
 		Year:     request.Year,
 		Rate:     request.Rate,
 		Director: request.Director,
-		//PosterPath: ,
-		Task: task,
+		Actors:   model.Actors{Actors: request.Actors},
+		Task:     task,
 	}
 }

@@ -9,14 +9,14 @@ import (
 
 const (
 	findMovieSql = `
-		SELECT m.id, m.synopsis, m.comments, m.year, m.rate, m.director, m.poster_path, t.name, t.started, t.ended 
+		SELECT m.id, m.synopsis, m.comments, m.year, m.rate, m.director, m.actors, m.poster_path, t.name, t.started, t.ended 
 		FROM movie m
 		INNER JOIN task t ON t.id = m.task_fk
 		WHERE m.id = $1
 	`
 	findMovieTaskIdSql   = "SELECT t.id FROM movie m INNER JOIN task t ON t.id = m.task_fk WHERE m.id = $1"
-	insertMovieSql       = "INSERT INTO movie (synopsis, comments, year, rate, director, poster_path, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
-	updateMovieSql       = "UPDATE movie SET synopsis = $2, comments = $3, year = $4, rate = $5, director = $6 WHERE id = $1"
+	insertMovieSql       = "INSERT INTO movie (synopsis, comments, year, rate, director, actors, poster_path, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id"
+	updateMovieSql       = "UPDATE movie SET synopsis = $2, comments = $3, year = $4, rate = $5, director = $6, actors = $7 WHERE id = $1"
 	updateMoviePosterSql = "UPDATE movie SET poster_path = $2 WHERE id = $1"
 	deleteMovieSql       = "DELETE FROM movie WHERE id = $1"
 )
@@ -31,7 +31,7 @@ func FindMovie(id int, db *sql.DB) model.Movie {
 	var coverPath sql.NullString
 	var started pq.NullTime
 	var ended pq.NullTime
-	if err := db.QueryRow(findMovieSql, id).Scan(&m.Id, &synopsis, &comments, &year, &rate, &director, &coverPath, &m.Task.Name, &started, &ended); err != nil {
+	if err := db.QueryRow(findMovieSql, id).Scan(&m.Id, &synopsis, &comments, &year, &rate, &director, &m.Actors, &coverPath, &m.Task.Name, &started, &ended); err != nil {
 		panic(err)
 	}
 	if synopsis.Valid {
@@ -105,12 +105,12 @@ func SaveOrUpdateMovie(m model.Movie, db *sql.DB) int {
 	}
 
 	if m.Id == 0 {
-		tx.QueryRow(insertMovieSql, synopsis, comments, year, rate, director, posterPath, taskId).Scan(&id)
+		tx.QueryRow(insertMovieSql, synopsis, comments, year, rate, director, m.Actors, posterPath, taskId).Scan(&id)
 		if err != nil {
 			panic(err)
 		}
 	} else {
-		_, err = tx.Exec(updateMovieSql, m.Id, synopsis, comments, year, rate, director)
+		_, err = tx.Exec(updateMovieSql, m.Id, synopsis, comments, year, rate, director, m.Actors)
 		if err != nil {
 			panic(err)
 		}
