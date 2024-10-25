@@ -14,10 +14,11 @@ const (
 		INNER JOIN task t ON t.id = m.task_fk
 		WHERE m.id = $1
 	`
-	findMovieTaskIdSql = "SELECT t.id FROM movie m INNER JOIN task t ON t.id = m.task_fk WHERE m.id = $1"
-	insertMovieSql     = "INSERT INTO movie (synopsis, comments, year, rate, director, poster_path, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
-	updateMovieSql     = "UPDATE movie SET synopsis = $2, comments = $3, year = $4, rate = $5, director = $6 WHERE id = $1"
-	deleteMovieSql     = "DELETE FROM movie WHERE id = $1"
+	findMovieTaskIdSql   = "SELECT t.id FROM movie m INNER JOIN task t ON t.id = m.task_fk WHERE m.id = $1"
+	insertMovieSql       = "INSERT INTO movie (synopsis, comments, year, rate, director, poster_path, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
+	updateMovieSql       = "UPDATE movie SET synopsis = $2, comments = $3, year = $4, rate = $5, director = $6 WHERE id = $1"
+	updateMoviePosterSql = "UPDATE movie SET poster_path = $2 WHERE id = $1"
+	deleteMovieSql       = "DELETE FROM movie WHERE id = $1"
 )
 
 func FindMovie(id int, db *sql.DB) model.Movie {
@@ -121,4 +122,9 @@ func SaveOrUpdateMovie(m model.Movie, db *sql.DB) int {
 	}
 
 	return id
+}
+
+func UpdateMoviePoster(id int, posterPath string, tx *sql.Tx) error {
+	_, err := tx.Exec(updateMoviePosterSql, id, posterPath)
+	return err
 }

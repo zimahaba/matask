@@ -40,7 +40,7 @@ func main() {
 
 	mux.HandleFunc("GET /tasks", transport.GetTasksHandler(db))
 
-	mux.HandleFunc("POST /cover", transport.UploadCoverHandler())
+	mux.HandleFunc("PUT /images/{id}", transport.UploadImageHandler(db))
 
 	server := http.Server{
 		Addr:    ":8080",

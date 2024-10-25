@@ -14,10 +14,11 @@ const (
 		INNER JOIN task t ON t.id = b.task_fk
 		WHERE b.id = $1
 	`
-	findBookTaskIdSql = "SELECT t.id FROM book b INNER JOIN task t ON t.id = b.task_fk WHERE b.id = $1"
-	insertBookSql     = "INSERT INTO book (progress, author, synopsis, comments, year, rate, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
-	updateBookSql     = "UPDATE book SET progress = $2, author = $3, synopsis = $4, comments = $5, year = $6, rate = $7 WHERE id = $1"
-	deleteBookSql     = "DELETE FROM book WHERE id = $1"
+	findBookTaskIdSql  = "SELECT t.id FROM book b INNER JOIN task t ON t.id = b.task_fk WHERE b.id = $1"
+	insertBookSql      = "INSERT INTO book (progress, author, synopsis, comments, year, rate, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
+	updateBookSql      = "UPDATE book SET progress = $2, author = $3, synopsis = $4, comments = $5, year = $6, rate = $7 WHERE id = $1"
+	updateBookCoverSql = "UPDATE book SET cover_path = $2 WHERE id = $1"
+	deleteBookSql      = "DELETE FROM book WHERE id = $1"
 )
 
 func FindBook(id int, db *sql.DB) model.Book {
@@ -117,4 +118,9 @@ func SaveOrUpdateBook(b model.Book, db *sql.DB) int {
 	}
 
 	return id
+}
+
+func UpdateBookCover(id int, coverPath string, tx *sql.Tx) error {
+	_, err := tx.Exec(updateBookCoverSql, id, coverPath)
+	return err
 }

@@ -8,7 +8,7 @@ import (
 	"matask/internal/service"
 	"matask/internal/transport/request"
 	"net/http"
-	"os"
+	"strconv"
 )
 
 func GetTasksHandler(db *sql.DB) http.HandlerFunc {
@@ -19,20 +19,19 @@ func GetTasksHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func UploadCoverHandler() http.HandlerFunc {
+func UploadImageHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.Atoi(r.PathValue("id"))
 
 		r.ParseMultipartForm(2 << 20)
-		file, _, err := r.FormFile("cover")
+		file, _, err := r.FormFile("image")
 		if err != nil {
 			errStr := fmt.Sprintf("Error in reading the file %s\n", err)
 			fmt.Println(errStr)
 			fmt.Fprintf(w, "Error in reading the file")
 			return
 		}
-
 		defer file.Close()
-
 		filebytes, err := io.ReadAll(file)
 		if err != nil {
 			errStr := fmt.Sprintf("Error in reading the file buffer %s\n", err)
@@ -41,8 +40,13 @@ func UploadCoverHandler() http.HandlerFunc {
 			return
 		}
 
-		os.WriteFile(os.Getenv("COVER_PATH"), filebytes, 0666)
+		taskType := r.FormValue("type")
+		if taskType == "book" {
+			service.UpdateBookCover(id, filebytes, db)
+		} else if taskType == "movie" {
+			service.UpdateMoviePoster(id, filebytes, db)
+		}
 
-		fmt.Fprintf(w, "UploadCoverHandler")
+		fmt.Fprintf(w, "")
 	}
 }
