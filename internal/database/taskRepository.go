@@ -44,7 +44,6 @@ func FindTasks(f model.TaskFilter, db *sql.DB) model.TaskPageResult {
 	if sortField == "" {
 		sortField = "id"
 	}
-	fmt.Printf("sortField: %s.\n", sortField)
 	sortDirection := sortDirectionMap[f.SortDirection]
 	if sortDirection == "" {
 		sortDirection = "ASC"
