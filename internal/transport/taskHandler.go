@@ -7,6 +7,7 @@ import (
 	"io"
 	"matask/internal/service"
 	"matask/internal/transport/request"
+	"matask/internal/transport/resource"
 	"net/http"
 	"strconv"
 )
@@ -15,7 +16,7 @@ func GetTasksHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		filter := request.ToTaskFilter(r.URL.Query())
 		result := service.FindTasks(filter, db)
-		json.NewEncoder(w).Encode(result)
+		json.NewEncoder(w).Encode(resource.FromTaskPageResult(result))
 	}
 }
 

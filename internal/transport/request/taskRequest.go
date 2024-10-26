@@ -68,5 +68,15 @@ func ToTaskFilter(query map[string][]string) model.TaskFilter {
 	} else {
 		filter.Size = 10
 	}
+	if len(query["sortField"]) > 0 {
+		filter.SortField = query["sortField"][0]
+	} else {
+		filter.SortField = "id"
+	}
+	if len(query["sortDirection"]) > 0 {
+		filter.SortDirection = query["sortDirection"][0]
+	} else {
+		filter.SortDirection = "ASC"
+	}
 	return filter
 }

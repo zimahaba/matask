@@ -9,6 +9,13 @@ type IdResource struct {
 	Id int
 }
 
+type Page struct {
+	Number        int
+	Size          int
+	TotalPages    int
+	TotalElements int
+}
+
 type Date struct {
 	time.Time
 }

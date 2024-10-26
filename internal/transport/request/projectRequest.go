@@ -1,7 +1,6 @@
 package request
 
 import (
-	"fmt"
 	"matask/internal/model"
 )
 
@@ -15,7 +14,6 @@ type ProjectRequest struct {
 }
 
 func (request ProjectRequest) ToProject() model.Project {
-	fmt.Printf("dyn: %v.\n", request.DynamicFields)
 	task := model.Task{
 		Name:    request.Name,
 		Type:    "project",

@@ -2,15 +2,16 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 	"matask/internal/model"
 	"time"
 
 	"github.com/lib/pq"
 )
 
-const (
-	findTasksSql = `
-		SELECT t.id, t.name, t.type, t.started, t.ended
+var findTasksSelectSql = "SELECT t.id, t.name, t.type, t.started, t.ended"
+var findTasksSelectCountSql = "SELECT COUNT(t.id)"
+var findTasksFromWhereSql = `
 		FROM task t
 		WHERE ($1 = '' OR UPPER(t.name) like '%' || UPPER($1) || '%')
 		AND ($2 = '' OR t.type = $2)
@@ -19,19 +20,57 @@ const (
 		AND (CAST($5 AS DATE) IS NULL OR (t.ended >= CAST($5 AS DATE) OR t.ended IS NULL))
 		AND (CAST($6 AS DATE) IS NULL OR (t.ended <= CAST($6 AS DATE) OR t.ended IS NULL))
 	`
+var findTaskOrderSql = " ORDER BY %s %s "
+var findTaskPageSql = " OFFSET $7 LIMIT $8 "
+
+const (
 	insertTaskSql = "INSERT INTO task (name, type, started, ended, created) VALUES ($1, $2, $3, $4, $5) RETURNING id"
 	updateTaskSql = "UPDATE task SET name = $2, started = $3, ended = $4 WHERE id = $1"
 	deleteTaskSql = "DELETE FROM task WHERE id = $1"
 )
 
-func FindTasks(f model.TaskFilter, db *sql.DB) []model.Task {
-	rows, err := db.Query(findTasksSql, f.Name, f.Type, f.Started1, f.Started2, f.Ended1, f.Ended2)
+var sortFieldMap = map[string]string{
+	"id":   "id",
+	"name": "name",
+}
+
+var sortDirectionMap = map[string]string{
+	"ASC":  "ASC",
+	"DESC": "DESC",
+}
+
+func FindTasks(f model.TaskFilter, db *sql.DB) model.TaskPageResult {
+	sortField := sortFieldMap[f.SortField]
+	if sortField == "" {
+		sortField = "id"
+	}
+	fmt.Printf("sortField: %s.\n", sortField)
+	sortDirection := sortDirectionMap[f.SortDirection]
+	if sortDirection == "" {
+		sortDirection = "ASC"
+	}
+	query := findTasksSelectSql + findTasksFromWhereSql + fmt.Sprintf(findTaskOrderSql, sortField, sortDirection) + findTaskPageSql
+	countQuery := findTasksSelectCountSql + findTasksFromWhereSql
+
+	var count int
+	if err := db.QueryRow(countQuery, f.Name, f.Type, f.Started1, f.Started2, f.Ended1, f.Ended2).Scan(&count); err != nil {
+		panic(err)
+	}
+
+	var offset int
+	if f.Page <= 1 {
+		offset = 0
+	} else {
+		offset = (f.Page - 1) * f.Size
+	}
+
+	rows, err := db.Query(query, f.Name, f.Type, f.Started1, f.Started2, f.Ended1, f.Ended2, offset, f.Size)
 	if err != nil {
 		panic(err)
 	}
 	defer rows.Close()
 
-	var tasks []model.Task
+	var tasks []model.TaskProjection
 
 	for rows.Next() {
 		var t model.Task
@@ -46,12 +85,21 @@ func FindTasks(f model.TaskFilter, db *sql.DB) []model.Task {
 		if ended.Valid {
 			t.Ended = ended.Time
 		}
-		tasks = append(tasks, t)
+		taskProjection := model.TaskProjection{Task: t}
+		tasks = append(tasks, taskProjection)
 	}
 	if err = rows.Err(); err != nil {
 		panic(err)
 	}
-	return tasks
+
+	totalPages := count / f.Size
+	remainder := count % f.Size
+	if totalPages == 0 || (totalPages > 0 && remainder > 0) {
+		totalPages++
+	}
+
+	pageResult := model.TaskPageResult{Tasks: tasks, Page: f.Page, Size: f.Size, TotalPages: totalPages, TotalElements: count}
+	return pageResult
 }
 
 func SaveOrUpdateTask(t model.Task, tx *sql.Tx) int {
