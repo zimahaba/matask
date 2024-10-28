@@ -1,9 +1,13 @@
 package model
 
+import "time"
+
 type MataskUser struct {
-	Id    int
-	Name  string
-	Email string
+	Id          int
+	Name        string
+	Email       string
+	Birthday    time.Time
+	Credentials UserCredentials
 }
 
 type UserCredentials struct {

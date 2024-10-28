@@ -1,5 +1,4 @@
 
-
 CREATE TABLE user_credentials (
     id       SERIAL NOT NULL,
     username TEXT NOT NULL,
@@ -10,6 +9,7 @@ CREATE TABLE matask_user (
 	id                  SERIAL NOT NULL,
 	name                TEXT   NOT NULL,
 	email               TEXT   NOT NULL,
+    birthday            DATE,
 	user_credentials_fk SERIAL NOT NULL
 );
 
@@ -19,7 +19,7 @@ CREATE TABLE task (
     type    TEXT      NOT NULL,
     started DATE,
     ended   DATE,
-    created TIMESTAMP NOT NULL
+    created TIMESTAMP NOT NULL,
     user_fk SERIAL
 );
 
@@ -63,3 +63,6 @@ ALTER TABLE movie   ADD CONSTRAINT movie_pkey   PRIMARY KEY (id);
 ALTER TABLE project ADD CONSTRAINT project_task_fkey FOREIGN KEY (task_fk) REFERENCES task (id);
 ALTER TABLE book    ADD CONSTRAINT book_task_fkey    FOREIGN KEY (task_fk) REFERENCES task (id);
 ALTER TABLE movie   ADD CONSTRAINT movie_task_fkey   FOREIGN KEY (task_fk) REFERENCES task (id);
+
+ALTER TABLE user_credentials ADD CONSTRAINT user_credentials_username_unq UNIQUE (username);
+ALTER TABLE matask_user ADD CONSTRAINT user_email_unq UNIQUE (email);
