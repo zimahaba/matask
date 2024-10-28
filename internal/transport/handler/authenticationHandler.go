@@ -2,33 +2,35 @@ package handler
 
 import (
 	"context"
-	"fmt"
-	"log"
-	"matask/internal/transport"
+	"database/sql"
+	"matask/internal/service"
 	"net/http"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func Auth(next http.Handler) http.HandlerFunc {
+func Auth(next http.Handler, db *sql.DB) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tokenString := r.Header.Get("Authorization")
 
-		token := r.Header.Get("Authorization")
-		fmt.Printf("token: %v.\v", token)
+		claims := &service.Claims{}
 
-		claims := &transport.Claims{}
-
-		tkn, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
-			return transport.JwtKey, nil
+		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+			return service.JwtKey, nil
 		})
 
-		if err != nil || !tkn.Valid {
-			log.Printf("error: %v.\n", err)
+		if err != nil || !token.Valid {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
-		newCtx := context.WithValue(r.Context(), userIdKey, 1)
+		userId, err := service.FindUserId(claims.Username, db)
+		if err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		newCtx := context.WithValue(r.Context(), UserIdKey, userId)
 		rWithId := r.WithContext(newCtx)
 		next.ServeHTTP(w, rWithId)
 	})

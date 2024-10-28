@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"matask/internal/service"
+	"matask/internal/transport/handler"
 	"matask/internal/transport/request"
 	"matask/internal/transport/resource"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 
 func GetTasksHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Printf("userId: %v.\n", r.Context().Value(handler.UserIdKey))
 		filter := request.ToTaskFilter(r.URL.Query())
 		result := service.FindTasks(filter, db)
 		json.NewEncoder(w).Encode(resource.FromTaskPageResult(result))

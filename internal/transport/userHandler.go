@@ -8,19 +8,9 @@ import (
 	"matask/internal/service"
 	"matask/internal/transport/request"
 	"net/http"
-	"os"
-	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
-
-type Claims struct {
-	Username string `json:"username"`
-	jwt.RegisteredClaims
-}
-
-var JwtKey = []byte(os.Getenv("JWT_KEY"))
 
 func SignupHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -40,6 +30,7 @@ func SignupHandler(db *sql.DB) http.HandlerFunc {
 		if err != nil {
 			log.Print(err)
 			http.Error(w, err.Error(), 400)
+			return
 		}
 		fmt.Fprint(w)
 	}
@@ -53,30 +44,20 @@ func LoginHandler(db *sql.DB) http.HandlerFunc {
 			panic(err)
 		}
 
-		if creds.Username != "admin" || creds.Password != "password" {
+		err = service.VerifyCredentials(creds.Username, creds.Password, db)
+		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
-		expirationTime := time.Now().Add(1 * time.Minute)
-		claims := &Claims{
-			Username: creds.Username,
-			RegisteredClaims: jwt.RegisteredClaims{
-				ExpiresAt: jwt.NewNumericDate(expirationTime),
-			},
-		}
-
-		token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
-		tokenString, err := token.SignedString(JwtKey)
+		token, err := service.GenerateToken(creds.Username)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		http.SetCookie(w, &http.Cookie{
-			Name:    "token",
-			Value:   tokenString,
-			Expires: time.Now().Add(5 * time.Minute),
-		})
+		h := w.Header()
+		h.Set("Authorization", token)
+		w.WriteHeader(200)
 	}
 }

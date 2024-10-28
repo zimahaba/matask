@@ -36,25 +36,25 @@ func main() {
 	mux.HandleFunc("POST /signup", transport.SignupHandler(db))
 	mux.HandleFunc("POST /login", transport.LoginHandler(db))
 
-	mux.HandleFunc("GET /projects/{id}", auth(transport.GetProjectHandler(db)))
-	mux.HandleFunc("POST /projects", auth(transport.CreateProjectHandler(db)))
-	mux.HandleFunc("PUT /projects/{id}", auth(transport.UpdateProjectHandler(db)))
-	mux.HandleFunc("DELETE /projects/{id}", auth(transport.DeleteProjectHandler(db)))
+	mux.HandleFunc("GET /projects/{id}", auth(transport.GetProjectHandler(db), db))
+	mux.HandleFunc("POST /projects", auth(transport.CreateProjectHandler(db), db))
+	mux.HandleFunc("PUT /projects/{id}", auth(transport.UpdateProjectHandler(db), db))
+	mux.HandleFunc("DELETE /projects/{id}", auth(transport.DeleteProjectHandler(db), db))
 
-	mux.HandleFunc("GET /books/{id}", auth(transport.GetBookHandler(db)))
-	mux.HandleFunc("POST /books", auth(transport.CreateBookHandler(db)))
-	mux.HandleFunc("PUT /books/{id}", auth(transport.UpdateBookHandler(db)))
-	mux.HandleFunc("DELETE /books/{id}", auth(transport.DeleteBookHandler(db)))
+	mux.HandleFunc("GET /books/{id}", auth(transport.GetBookHandler(db), db))
+	mux.HandleFunc("POST /books", auth(transport.CreateBookHandler(db), db))
+	mux.HandleFunc("PUT /books/{id}", auth(transport.UpdateBookHandler(db), db))
+	mux.HandleFunc("DELETE /books/{id}", auth(transport.DeleteBookHandler(db), db))
 
-	mux.HandleFunc("GET /movies/{id}", auth(transport.GetMovieHandler(db)))
-	mux.HandleFunc("POST /movies", auth(transport.CreateMovieHandler(db)))
-	mux.HandleFunc("PUT /movies/{id}", auth(transport.UpdateMovieHandler(db)))
-	mux.HandleFunc("DELETE /movies/{id}", auth(transport.DeleteMovieHandler(db)))
+	mux.HandleFunc("GET /movies/{id}", auth(transport.GetMovieHandler(db), db))
+	mux.HandleFunc("POST /movies", auth(transport.CreateMovieHandler(db), db))
+	mux.HandleFunc("PUT /movies/{id}", auth(transport.UpdateMovieHandler(db), db))
+	mux.HandleFunc("DELETE /movies/{id}", auth(transport.DeleteMovieHandler(db), db))
 
-	mux.Handle("GET /tasks", auth(transport.GetTasksHandler(db)))
+	mux.Handle("GET /tasks", auth(transport.GetTasksHandler(db), db))
 	//mux.Handle("GET /tasks", handler.ErrorHandler{DB: db, H: h))
 
-	mux.HandleFunc("PUT /images/{id}", auth(transport.UploadImageHandler(db)))
+	mux.HandleFunc("PUT /images/{id}", auth(transport.UploadImageHandler(db), db))
 
 	newMux := handler.Logging(mux)
 
@@ -72,8 +72,8 @@ func main() {
 	}
 }
 
-func auth(h http.Handler) http.HandlerFunc {
-	return handler.Auth(h)
+func auth(h http.Handler, db *sql.DB) http.HandlerFunc {
+	return handler.Auth(h, db)
 }
 
 func loadEnv() {

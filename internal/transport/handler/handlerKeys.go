@@ -2,5 +2,5 @@ package handler
 
 type contextKey int
 
-const requestIdKey contextKey = 0
-const userIdKey contextKey = 1
+const RequestIdKey contextKey = 0
+const UserIdKey contextKey = 1

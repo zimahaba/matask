@@ -15,7 +15,7 @@ type ErrorHandler struct {
 func (h ErrorHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err := h.H(h.DB, w, r)
 	if err != nil {
-		log.Printf("ops ERROR - requestId=%v", r.Context().Value(requestIdKey))
+		log.Printf("ops ERROR - requestId=%v", r.Context().Value(RequestIdKey))
 		/*switch e := err.(type) {
 		case Error:
 			// We can retrieve the status here and write out a specific
