@@ -61,7 +61,7 @@ func FindBook(id int, db *sql.DB) model.Book {
 	return b
 }
 
-func SaveOrUpdateBook(b model.Book, db *sql.DB) int {
+func SaveOrUpdateBook(b model.Book, userId int, db *sql.DB) int {
 	tx, err := db.Begin()
 	if err != nil {
 		panic(err)
@@ -76,7 +76,7 @@ func SaveOrUpdateBook(b model.Book, db *sql.DB) int {
 		b.Task.Id = taskId
 	}
 
-	taskId := SaveOrUpdateTask(b.Task, tx)
+	taskId := SaveOrUpdateTask(b.Task, userId, tx)
 
 	var id int
 	var author sql.NullString

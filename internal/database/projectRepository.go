@@ -40,7 +40,7 @@ func FindProject(id int, db *sql.DB) model.Project {
 	return p
 }
 
-func SaveOrUpdateProject(p model.Project, db *sql.DB) int {
+func SaveOrUpdateProject(p model.Project, userId int, db *sql.DB) int {
 	tx, err := db.Begin()
 	if err != nil {
 		panic(err)
@@ -55,7 +55,7 @@ func SaveOrUpdateProject(p model.Project, db *sql.DB) int {
 		p.Task.Id = taskId
 	}
 
-	taskId := SaveOrUpdateTask(p.Task, tx)
+	taskId := SaveOrUpdateTask(p.Task, userId, tx)
 
 	var id int
 	var description sql.NullString

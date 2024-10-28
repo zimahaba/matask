@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"matask/internal/service"
+	"matask/internal/transport/handler"
 	"matask/internal/transport/request"
 	"matask/internal/transport/resource"
 	"net/http"
@@ -29,7 +30,8 @@ func CreateMovieHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		movieId := service.SaveOrUpdateMovie(m.ToMovie(), db)
+		userId := r.Context().Value(handler.UserIdKey).(int)
+		movieId := service.SaveOrUpdateMovie(m.ToMovie(), userId, db)
 		json.NewEncoder(w).Encode(resource.IdResource{Id: movieId})
 	}
 }
@@ -45,7 +47,8 @@ func UpdateMovieHandler(db *sql.DB) http.HandlerFunc {
 		}
 		movie := m.ToMovie()
 		movie.Id = id
-		service.SaveOrUpdateMovie(movie, db)
+		userId := r.Context().Value(handler.UserIdKey).(int)
+		service.SaveOrUpdateMovie(movie, userId, db)
 		fmt.Fprintf(w, "")
 	}
 }

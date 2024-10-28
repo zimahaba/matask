@@ -61,7 +61,7 @@ func FindMovie(id int, db *sql.DB) model.Movie {
 	return m
 }
 
-func SaveOrUpdateMovie(m model.Movie, db *sql.DB) int {
+func SaveOrUpdateMovie(m model.Movie, userId int, db *sql.DB) int {
 	tx, err := db.Begin()
 	if err != nil {
 		panic(err)
@@ -76,7 +76,7 @@ func SaveOrUpdateMovie(m model.Movie, db *sql.DB) int {
 		m.Task.Id = taskId
 	}
 
-	taskId := SaveOrUpdateTask(m.Task, tx)
+	taskId := SaveOrUpdateTask(m.Task, userId, tx)
 
 	var id int
 	var synopsis sql.NullString
@@ -105,7 +105,7 @@ func SaveOrUpdateMovie(m model.Movie, db *sql.DB) int {
 	}
 
 	if m.Id == 0 {
-		tx.QueryRow(insertMovieSql, synopsis, comments, year, rate, director, m.Actors, posterPath, taskId).Scan(&id)
+		err := tx.QueryRow(insertMovieSql, synopsis, comments, year, rate, director, m.Actors, posterPath, taskId).Scan(&id)
 		if err != nil {
 			panic(err)
 		}

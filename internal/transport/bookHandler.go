@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"matask/internal/service"
+	"matask/internal/transport/handler"
 	"matask/internal/transport/request"
 	"matask/internal/transport/resource"
 	"net/http"
@@ -29,7 +30,8 @@ func CreateBookHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		bookId := service.SaveOrUpdateBook(b.ToBook(), db)
+		userId := r.Context().Value(handler.UserIdKey).(int)
+		bookId := service.SaveOrUpdateBook(b.ToBook(), userId, db)
 		json.NewEncoder(w).Encode(resource.IdResource{Id: bookId})
 	}
 }
@@ -45,7 +47,8 @@ func UpdateBookHandler(db *sql.DB) http.HandlerFunc {
 		}
 		book := b.ToBook()
 		book.Id = id
-		service.SaveOrUpdateBook(book, db)
+		userId := r.Context().Value(handler.UserIdKey).(int)
+		service.SaveOrUpdateBook(book, userId, db)
 		fmt.Fprintf(w, "")
 	}
 }

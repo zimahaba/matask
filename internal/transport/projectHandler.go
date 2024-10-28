@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"matask/internal/service"
+	"matask/internal/transport/handler"
 	"matask/internal/transport/request"
 	"matask/internal/transport/resource"
 	"net/http"
@@ -27,8 +28,8 @@ func CreateProjectHandler(db *sql.DB) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-
-		projectId := service.SaveOrUpdateProject(p.ToProject(), db)
+		userId := r.Context().Value(handler.UserIdKey).(int)
+		projectId := service.SaveOrUpdateProject(p.ToProject(), userId, db)
 		json.NewEncoder(w).Encode(resource.IdResource{Id: projectId})
 	}
 }
@@ -44,7 +45,8 @@ func UpdateProjectHandler(db *sql.DB) http.HandlerFunc {
 		}
 		project := p.ToProject()
 		project.Id = id
-		service.SaveOrUpdateProject(project, db)
+		userId := r.Context().Value(handler.UserIdKey).(int)
+		service.SaveOrUpdateProject(project, userId, db)
 		fmt.Fprintf(w, "")
 	}
 }

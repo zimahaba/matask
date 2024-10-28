@@ -24,7 +24,7 @@ var findTaskOrderSql = " ORDER BY %s %s "
 var findTaskPageSql = " OFFSET $7 LIMIT $8 "
 
 const (
-	insertTaskSql = "INSERT INTO task (name, type, started, ended, created) VALUES ($1, $2, $3, $4, $5) RETURNING id"
+	insertTaskSql = "INSERT INTO task (name, type, started, ended, created, user_fk) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id"
 	updateTaskSql = "UPDATE task SET name = $2, started = $3, ended = $4 WHERE id = $1"
 	deleteTaskSql = "DELETE FROM task WHERE id = $1"
 )
@@ -101,7 +101,7 @@ func FindTasks(f model.TaskFilter, db *sql.DB) model.TaskPageResult {
 	return pageResult
 }
 
-func SaveOrUpdateTask(t model.Task, tx *sql.Tx) int {
+func SaveOrUpdateTask(t model.Task, userId int, tx *sql.Tx) int {
 	var started *time.Time
 	if !t.Started.IsZero() {
 		started = &t.Started
@@ -115,7 +115,7 @@ func SaveOrUpdateTask(t model.Task, tx *sql.Tx) int {
 	var id int
 	var err error
 	if t.Id == 0 {
-		err = tx.QueryRow(insertTaskSql, t.Name, t.Type, started, ended, now).Scan(&id)
+		err = tx.QueryRow(insertTaskSql, t.Name, t.Type, started, ended, now, userId).Scan(&id)
 	} else {
 		_, err = tx.Exec(updateTaskSql, t.Id, t.Name, started, ended)
 		id = t.Id

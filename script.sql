@@ -20,7 +20,7 @@ CREATE TABLE task (
     started DATE,
     ended   DATE,
     created TIMESTAMP NOT NULL,
-    user_fk SERIAL
+    user_fk SERIAL    NOT NULL
 );
 
 CREATE TABLE project (

@@ -11,8 +11,8 @@ func FindMovie(id int, db *sql.DB) model.Movie {
 	return database.FindMovie(id, db)
 }
 
-func SaveOrUpdateMovie(p model.Movie, db *sql.DB) int {
-	return database.SaveOrUpdateMovie(p, db)
+func SaveOrUpdateMovie(p model.Movie, userId int, db *sql.DB) int {
+	return database.SaveOrUpdateMovie(p, userId, db)
 }
 
 func UpdateMoviePoster(id int, filebytes []byte, db *sql.DB) {
