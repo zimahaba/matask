@@ -36,6 +36,7 @@ func main() {
 
 	mux.HandleFunc("POST /signup", transport.SignupHandler(db))
 	mux.HandleFunc("POST /login", transport.LoginHandler(db))
+	mux.HandleFunc("POST /logout", transport.LogoutHandler())
 
 	mux.HandleFunc("GET /auth/status", auth(transport.AuthCheckHandler(db), db))
 

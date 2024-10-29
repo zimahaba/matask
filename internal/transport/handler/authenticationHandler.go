@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"matask/internal/service"
 	"net/http"
 
@@ -35,7 +34,6 @@ func Auth(next http.Handler, db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		fmt.Printf("going through: %v.\n", userId)
 		newCtx := context.WithValue(r.Context(), UserIdKey, userId)
 		rWithId := r.WithContext(newCtx)
 		next.ServeHTTP(w, rWithId)

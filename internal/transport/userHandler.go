@@ -62,7 +62,7 @@ func LoginHandler(db *sql.DB) http.HandlerFunc {
 		http.SetCookie(w, &http.Cookie{
 			Name:     "token",
 			Value:    token,
-			Expires:  time.Now().Add(5 * time.Minute),
+			Expires:  time.Now().Add(30 * time.Second),
 			HttpOnly: true,
 			SameSite: http.SameSiteStrictMode,
 		})
@@ -70,10 +70,21 @@ func LoginHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func LogoutHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		http.SetCookie(w, &http.Cookie{
+			Name:     "token",
+			Value:    "",
+			Expires:  time.Now(),
+			HttpOnly: true,
+			SameSite: http.SameSiteStrictMode,
+		})
+	}
+}
+
 func AuthCheckHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := r.Context().Value(handler.UserIdKey).(int)
-		fmt.Printf("userId: %v.\n", userId)
 		user, err := service.FindUser(userId, db)
 		if err != nil {
 			log.Print(err)
