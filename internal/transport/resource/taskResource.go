@@ -3,12 +3,12 @@ package resource
 import "matask/internal/model"
 
 type TaskResource struct {
-	Id      int
-	Name    string
-	Type    string
-	Started Date
-	Ended   Date
-	ChildId int
+	Id      int    `json:"id"`
+	Name    string `json:"name"`
+	Type    string `json:"type"`
+	Started Date   `json:"started"`
+	Ended   Date   `json:"ended"`
+	ChildId int    `json:"childId"`
 }
 
 type TaskPageResource struct {

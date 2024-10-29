@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"matask/internal/service"
 	"net/http"
 
@@ -11,11 +12,15 @@ import (
 
 func Auth(next http.Handler, db *sql.DB) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tokenString := r.Header.Get("Authorization")
+		tokenCookie, err := r.Cookie("token")
+		if err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
 
 		claims := &service.Claims{}
 
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		token, err := jwt.ParseWithClaims(tokenCookie.Value, claims, func(token *jwt.Token) (interface{}, error) {
 			return service.JwtKey, nil
 		})
 
@@ -30,6 +35,7 @@ func Auth(next http.Handler, db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		fmt.Printf("going through: %v.\n", userId)
 		newCtx := context.WithValue(r.Context(), UserIdKey, userId)
 		rWithId := r.WithContext(newCtx)
 		next.ServeHTTP(w, rWithId)

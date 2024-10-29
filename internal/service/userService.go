@@ -8,6 +8,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+func FindUser(id int, db *sql.DB) (model.MataskUser, error) {
+	return database.FindUser(id, db)
+}
+
 func FindUserId(username string, db *sql.DB) (int, error) {
 	return database.FindUserId(username, db)
 }

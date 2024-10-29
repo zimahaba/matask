@@ -7,14 +7,22 @@ import (
 )
 
 const (
+	findUserSql          = "SELECT u.id, u.name, u.email FROM matask_user u WHERE u.id = $1"
 	findUserIdSql        = "SELECT u.id FROM matask_user u WHERE u.email = $1"
 	findPasswordSql      = "SELECT uc.password FROM user_credentials uc WHERE uc.username = $1"
 	insertUserSql        = "INSERT INTO matask_user (name, email, user_credentials_fk) VALUES ($1, $2, $3) RETURNING id"
 	insertCredentialsSql = "INSERT INTO user_credentials (username, password) VALUES ($1, $2) RETURNING id"
 )
 
+func FindUser(id int, db *sql.DB) (model.MataskUser, error) {
+	var user model.MataskUser
+	if err := db.QueryRow(findUserSql, id).Scan(&user.Id, &user.Name, &user.Email); err != nil {
+		return user, err
+	}
+	return user, nil
+}
+
 func FindUserId(email string, db *sql.DB) (int, error) {
-	fmt.Println(email)
 	var userId int
 	if err := db.QueryRow(findUserIdSql, email).Scan(&userId); err != nil {
 		return userId, err

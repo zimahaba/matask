@@ -12,6 +12,7 @@ import (
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/rs/cors"
 )
 
 // https://manuel.kiessling.net/2012/09/28/applying-the-clean-architecture-to-go-applications/
@@ -36,6 +37,8 @@ func main() {
 	mux.HandleFunc("POST /signup", transport.SignupHandler(db))
 	mux.HandleFunc("POST /login", transport.LoginHandler(db))
 
+	mux.HandleFunc("GET /auth/status", auth(transport.AuthCheckHandler(db), db))
+
 	mux.HandleFunc("GET /projects/{id}", auth(transport.GetProjectHandler(db), db))
 	mux.HandleFunc("POST /projects", auth(transport.CreateProjectHandler(db), db))
 	mux.HandleFunc("PUT /projects/{id}", auth(transport.UpdateProjectHandler(db), db))
@@ -56,7 +59,14 @@ func main() {
 
 	mux.HandleFunc("PUT /images/{id}", auth(transport.UploadImageHandler(db), db))
 
-	newMux := handler.Logging(mux)
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{os.Getenv("ALLOWED_ORIGINS")},
+		AllowedMethods:   []string{"GET", "POST", "PUT"},
+		AllowedHeaders:   []string{"Authorization", "Content-type"},
+		AllowCredentials: true,
+	})
+
+	newMux := c.Handler(handler.Logging(mux))
 
 	server := http.Server{
 		Addr:    ":8080",

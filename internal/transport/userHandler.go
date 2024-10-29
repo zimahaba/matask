@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"log"
 	"matask/internal/service"
+	"matask/internal/transport/handler"
 	"matask/internal/transport/request"
+	"matask/internal/transport/resource"
 	"net/http"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -56,8 +59,27 @@ func LoginHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		h := w.Header()
-		h.Set("Authorization", token)
-		w.WriteHeader(200)
+		http.SetCookie(w, &http.Cookie{
+			Name:     "token",
+			Value:    token,
+			Expires:  time.Now().Add(5 * time.Minute),
+			HttpOnly: true,
+			SameSite: http.SameSiteStrictMode,
+		})
+		json.NewEncoder(w).Encode(resource.UserResource{Username: creds.Username})
+	}
+}
+
+func AuthCheckHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId := r.Context().Value(handler.UserIdKey).(int)
+		fmt.Printf("userId: %v.\n", userId)
+		user, err := service.FindUser(userId, db)
+		if err != nil {
+			log.Print(err)
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		json.NewEncoder(w).Encode(resource.FromUser(user))
 	}
 }
