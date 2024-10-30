@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"matask/internal/transport"
 	"matask/internal/transport/handler"
 	"net/http"
@@ -25,12 +26,30 @@ import (
 // https://drstearns.github.io/tutorials/gomiddleware/
 // https://www.jetbrains.com/guide/go/tutorials/authentication-for-go-apps/auth/
 
-var db *sql.DB
+// https://github.com/golang/example/blob/master/slog-handler-guide/README.md
+
+func getLogLevel() slog.Level {
+	level := os.Getenv("LOG_LEVEL")
+	switch {
+	case level == "DEBUG":
+		return slog.LevelDebug
+	case level == "INFO":
+		return slog.LevelInfo
+	case level == "WARN":
+		return slog.LevelWarn
+	case level == "ERROR":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
+}
 
 func main() {
 	loadEnv()
-	db = connectDB()
+	db := connectDB()
 	defer db.Close()
+
+	slog.SetLogLoggerLevel(getLogLevel())
 
 	mux := http.NewServeMux()
 

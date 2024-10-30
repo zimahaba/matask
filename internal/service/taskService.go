@@ -6,6 +6,6 @@ import (
 	"matask/internal/model"
 )
 
-func FindTasks(filter model.TaskFilter, db *sql.DB) model.TaskPageResult {
+func FindTasks(filter model.TaskFilter, db *sql.DB) (model.TaskPageResult, error) {
 	return database.FindTasks(filter, db)
 }

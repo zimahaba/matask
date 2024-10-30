@@ -19,9 +19,10 @@ var findTasksFromWhereSql = `
 		AND (CAST($4 AS DATE) IS NULL OR t.started <= CAST($4 AS DATE))
 		AND (CAST($5 AS DATE) IS NULL OR (t.ended >= CAST($5 AS DATE) OR t.ended IS NULL))
 		AND (CAST($6 AS DATE) IS NULL OR (t.ended <= CAST($6 AS DATE) OR t.ended IS NULL))
+		AND t.user_fk = $7
 	`
 var findTaskOrderSql = " ORDER BY %s %s "
-var findTaskPageSql = " OFFSET $7 LIMIT $8 "
+var findTaskPageSql = " OFFSET $8 LIMIT $9 "
 
 const (
 	insertTaskSql = "INSERT INTO task (name, type, started, ended, created, user_fk) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id"
@@ -39,7 +40,7 @@ var sortDirectionMap = map[string]string{
 	"DESC": "DESC",
 }
 
-func FindTasks(f model.TaskFilter, db *sql.DB) model.TaskPageResult {
+func FindTasks(f model.TaskFilter, db *sql.DB) (model.TaskPageResult, error) {
 	sortField := sortFieldMap[f.SortField]
 	if sortField == "" {
 		sortField = "id"
@@ -52,8 +53,8 @@ func FindTasks(f model.TaskFilter, db *sql.DB) model.TaskPageResult {
 	countQuery := findTasksSelectCountSql + findTasksFromWhereSql
 
 	var count int
-	if err := db.QueryRow(countQuery, f.Name, f.Type, f.Started1, f.Started2, f.Ended1, f.Ended2).Scan(&count); err != nil {
-		panic(err)
+	if err := db.QueryRow(countQuery, f.Name, f.Type, f.Started1, f.Started2, f.Ended1, f.Ended2, f.UserId).Scan(&count); err != nil {
+		return model.TaskPageResult{}, err
 	}
 
 	var offset int
@@ -63,9 +64,9 @@ func FindTasks(f model.TaskFilter, db *sql.DB) model.TaskPageResult {
 		offset = (f.Page - 1) * f.Size
 	}
 
-	rows, err := db.Query(query, f.Name, f.Type, f.Started1, f.Started2, f.Ended1, f.Ended2, offset, f.Size)
+	rows, err := db.Query(query, f.Name, f.Type, f.Started1, f.Started2, f.Ended1, f.Ended2, f.UserId, offset)
 	if err != nil {
-		panic(err)
+		return model.TaskPageResult{}, err
 	}
 	defer rows.Close()
 
@@ -76,7 +77,7 @@ func FindTasks(f model.TaskFilter, db *sql.DB) model.TaskPageResult {
 		var started pq.NullTime
 		var ended pq.NullTime
 		if err := rows.Scan(&t.Id, &t.Name, &t.Type, &started, &ended); err != nil {
-			panic(err)
+			return model.TaskPageResult{}, err
 		}
 		if started.Valid {
 			t.Started = started.Time
@@ -88,7 +89,7 @@ func FindTasks(f model.TaskFilter, db *sql.DB) model.TaskPageResult {
 		tasks = append(tasks, taskProjection)
 	}
 	if err = rows.Err(); err != nil {
-		panic(err)
+		return model.TaskPageResult{}, err
 	}
 
 	totalPages := count / f.Size
@@ -98,7 +99,7 @@ func FindTasks(f model.TaskFilter, db *sql.DB) model.TaskPageResult {
 	}
 
 	pageResult := model.TaskPageResult{Tasks: tasks, Page: f.Page, Size: f.Size, TotalPages: totalPages, TotalElements: count}
-	return pageResult
+	return pageResult, nil
 }
 
 func SaveOrUpdateTask(t model.Task, userId int, tx *sql.Tx) int {

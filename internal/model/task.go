@@ -27,6 +27,7 @@ type TaskFilter struct {
 	Size          int
 	SortField     string
 	SortDirection string
+	UserId        int
 }
 
 type TaskProjection struct {

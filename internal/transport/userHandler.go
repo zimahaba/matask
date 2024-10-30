@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"matask/internal/service"
 	"matask/internal/transport/handler"
 	"matask/internal/transport/request"
@@ -20,7 +21,9 @@ func SignupHandler(db *sql.DB) http.HandlerFunc {
 		var userRequest request.UserRequest
 		err := json.NewDecoder(r.Body).Decode(&userRequest)
 		if err != nil {
-			panic(err)
+			slog.Error(err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		password, err := bcrypt.GenerateFromPassword([]byte(userRequest.Password), bcrypt.DefaultCost)
@@ -62,7 +65,7 @@ func LoginHandler(db *sql.DB) http.HandlerFunc {
 		http.SetCookie(w, &http.Cookie{
 			Name:     "token",
 			Value:    token,
-			Expires:  time.Now().Add(30 * time.Second),
+			Expires:  time.Now().Add(10 * time.Minute),
 			HttpOnly: true,
 			SameSite: http.SameSiteStrictMode,
 		})

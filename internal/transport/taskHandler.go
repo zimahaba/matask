@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"matask/internal/service"
 	"matask/internal/transport/handler"
 	"matask/internal/transport/request"
@@ -15,9 +16,13 @@ import (
 
 func GetTasksHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("userId: %v.\n", r.Context().Value(handler.UserIdKey))
 		filter := request.ToTaskFilter(r.URL.Query())
-		result := service.FindTasks(filter, db)
+		filter.UserId = r.Context().Value(handler.UserIdKey).(int)
+		result, err := service.FindTasks(filter, db)
+		if err != nil {
+			slog.Debug(err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		json.NewEncoder(w).Encode(resource.FromTaskPageResult(result))
 	}
 }
