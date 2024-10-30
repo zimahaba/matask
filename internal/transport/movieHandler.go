@@ -15,7 +15,11 @@ import (
 func GetMovieHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.Atoi(r.PathValue("id"))
-		m := service.FindMovie(id, db)
+		m, err := service.FindMovie(id, db)
+		if err != nil {
+			// log
+			// error response
+		}
 		json.NewEncoder(w).Encode(resource.FromMovie(m))
 	}
 }
@@ -31,7 +35,11 @@ func CreateMovieHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		userId := r.Context().Value(handler.UserIdKey).(int)
-		movieId := service.SaveOrUpdateMovie(m.ToMovie(), userId, db)
+		movieId, err := service.SaveOrUpdateMovie(m.ToMovie(), userId, db)
+		if err != nil {
+			// log
+			// error response
+		}
 		json.NewEncoder(w).Encode(resource.IdResource{Id: movieId})
 	}
 }

@@ -21,7 +21,7 @@ const (
 	deleteMovieSql       = "DELETE FROM movie WHERE id = $1"
 )
 
-func FindMovie(id int, db *sql.DB) model.Movie {
+func FindMovie(id int, db *sql.DB) (model.Movie, error) {
 	var m model.Movie
 	var synopsis sql.NullString
 	var comments sql.NullString
@@ -32,7 +32,7 @@ func FindMovie(id int, db *sql.DB) model.Movie {
 	var started pq.NullTime
 	var ended pq.NullTime
 	if err := db.QueryRow(findMovieSql, id).Scan(&m.Id, &synopsis, &comments, &year, &rate, &director, &m.Actors, &coverPath, &m.Task.Name, &started, &ended); err != nil {
-		panic(err)
+		return model.Movie{}, err
 	}
 	if synopsis.Valid {
 		m.Synopsis = synopsis.String
@@ -58,25 +58,28 @@ func FindMovie(id int, db *sql.DB) model.Movie {
 	if ended.Valid {
 		m.Task.Ended = ended.Time
 	}
-	return m
+	return m, nil
 }
 
-func SaveOrUpdateMovie(m model.Movie, userId int, db *sql.DB) int {
+func SaveOrUpdateMovie(m model.Movie, userId int, db *sql.DB) (int, error) {
 	tx, err := db.Begin()
 	if err != nil {
-		panic(err)
+		return -1, err
 	}
 	defer tx.Rollback()
 
 	if m.Id != 0 {
 		var taskId int
 		if err := tx.QueryRow(findMovieTaskIdSql, m.Id).Scan(&taskId); err != nil {
-			panic(err)
+			return -1, err
 		}
 		m.Task.Id = taskId
 	}
 
-	taskId := SaveOrUpdateTask(m.Task, userId, tx)
+	taskId, err := SaveOrUpdateTask(m.Task, userId, tx)
+	if err != nil {
+		return -1, err
+	}
 
 	var id int
 	var synopsis sql.NullString
@@ -107,21 +110,21 @@ func SaveOrUpdateMovie(m model.Movie, userId int, db *sql.DB) int {
 	if m.Id == 0 {
 		err := tx.QueryRow(insertMovieSql, synopsis, comments, year, rate, director, m.Actors, posterPath, taskId).Scan(&id)
 		if err != nil {
-			panic(err)
+			return -1, err
 		}
 	} else {
 		_, err = tx.Exec(updateMovieSql, m.Id, synopsis, comments, year, rate, director, m.Actors)
 		if err != nil {
-			panic(err)
+			return -1, err
 		}
 		id = m.Id
 	}
 
 	if err = tx.Commit(); err != nil {
-		panic(err)
+		return -1, err
 	}
 
-	return id
+	return id, nil
 }
 
 func UpdateMoviePoster(id int, posterPath string, tx *sql.Tx) error {

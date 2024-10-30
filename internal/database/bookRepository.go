@@ -21,7 +21,7 @@ const (
 	deleteBookSql      = "DELETE FROM book WHERE id = $1"
 )
 
-func FindBook(id int, db *sql.DB) model.Book {
+func FindBook(id int, db *sql.DB) (model.Book, error) {
 	var b model.Book
 	var author sql.NullString
 	var synopsis sql.NullString
@@ -32,7 +32,7 @@ func FindBook(id int, db *sql.DB) model.Book {
 	var started pq.NullTime
 	var ended pq.NullTime
 	if err := db.QueryRow(findBookSql, id).Scan(&b.Id, &b.Progress, &author, &synopsis, &comments, &year, &rate, &coverPath, &b.Task.Name, &started, &ended); err != nil {
-		panic(err)
+		return model.Book{}, err
 	}
 	if author.Valid {
 		b.Author = author.String
@@ -58,25 +58,28 @@ func FindBook(id int, db *sql.DB) model.Book {
 	if ended.Valid {
 		b.Task.Ended = ended.Time
 	}
-	return b
+	return b, nil
 }
 
-func SaveOrUpdateBook(b model.Book, userId int, db *sql.DB) int {
+func SaveOrUpdateBook(b model.Book, userId int, db *sql.DB) (int, error) {
 	tx, err := db.Begin()
 	if err != nil {
-		panic(err)
+		return -1, err
 	}
 	defer tx.Rollback()
 
 	if b.Id != 0 {
 		var taskId int
 		if err := tx.QueryRow(findBookTaskIdSql, b.Id).Scan(&taskId); err != nil {
-			panic(err)
+			return -1, err
 		}
 		b.Task.Id = taskId
 	}
 
-	taskId := SaveOrUpdateTask(b.Task, userId, tx)
+	taskId, err := SaveOrUpdateTask(b.Task, userId, tx)
+	if err != nil {
+		return -1, err
+	}
 
 	var id int
 	var author sql.NullString
@@ -103,21 +106,21 @@ func SaveOrUpdateBook(b model.Book, userId int, db *sql.DB) int {
 	if b.Id == 0 {
 		err = tx.QueryRow(insertBookSql, b.Progress, author, synopsis, comments, year, rate, taskId).Scan(&id)
 		if err != nil {
-			panic(err)
+			return -1, err
 		}
 	} else {
 		_, err = tx.Exec(updateBookSql, b.Id, b.Progress, author, synopsis, comments, year, rate)
 		if err != nil {
-			panic(err)
+			return -1, err
 		}
 		id = b.Id
 	}
 
 	if err = tx.Commit(); err != nil {
-		panic(err)
+		return -1, err
 	}
 
-	return id
+	return id, nil
 }
 
 func UpdateBookCover(id int, coverPath string, tx *sql.Tx) error {

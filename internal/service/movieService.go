@@ -7,11 +7,11 @@ import (
 	"os"
 )
 
-func FindMovie(id int, db *sql.DB) model.Movie {
+func FindMovie(id int, db *sql.DB) (model.Movie, error) {
 	return database.FindMovie(id, db)
 }
 
-func SaveOrUpdateMovie(p model.Movie, userId int, db *sql.DB) int {
+func SaveOrUpdateMovie(p model.Movie, userId int, db *sql.DB) (int, error) {
 	return database.SaveOrUpdateMovie(p, userId, db)
 }
 
@@ -38,6 +38,6 @@ func UpdateMoviePoster(id int, filebytes []byte, db *sql.DB) {
 	}
 }
 
-func DeleteMovie(movieId int, db *sql.DB) {
-	database.DeleteTaskCascade(movieId, "movie", db)
+func DeleteMovie(movieId int, db *sql.DB) error {
+	return database.DeleteTaskCascade(movieId, "movie", db)
 }

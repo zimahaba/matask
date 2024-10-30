@@ -7,11 +7,11 @@ import (
 	"os"
 )
 
-func FindBook(id int, db *sql.DB) model.Book {
+func FindBook(id int, db *sql.DB) (model.Book, error) {
 	return database.FindBook(id, db)
 }
 
-func SaveOrUpdateBook(p model.Book, userId int, db *sql.DB) int {
+func SaveOrUpdateBook(p model.Book, userId int, db *sql.DB) (int, error) {
 	return database.SaveOrUpdateBook(p, userId, db)
 }
 
@@ -38,6 +38,6 @@ func UpdateBookCover(id int, filebytes []byte, db *sql.DB) {
 	}
 }
 
-func DeleteBook(bookId int, db *sql.DB) {
-	database.DeleteTaskCascade(bookId, "book", db)
+func DeleteBook(bookId int, db *sql.DB) error {
+	return database.DeleteTaskCascade(bookId, "book", db)
 }

@@ -15,7 +15,11 @@ import (
 func GetBookHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.Atoi(r.PathValue("id"))
-		b := service.FindBook(id, db)
+		b, err := service.FindBook(id, db)
+		if err != nil {
+			// log
+			// error response
+		}
 		json.NewEncoder(w).Encode(resource.FromBook(b))
 	}
 }
@@ -31,7 +35,11 @@ func CreateBookHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		userId := r.Context().Value(handler.UserIdKey).(int)
-		bookId := service.SaveOrUpdateBook(b.ToBook(), userId, db)
+		bookId, err := service.SaveOrUpdateBook(b.ToBook(), userId, db)
+		if err != nil {
+			// log
+			// error response
+		}
 		json.NewEncoder(w).Encode(resource.IdResource{Id: bookId})
 	}
 }
@@ -48,7 +56,12 @@ func UpdateBookHandler(db *sql.DB) http.HandlerFunc {
 		book := b.ToBook()
 		book.Id = id
 		userId := r.Context().Value(handler.UserIdKey).(int)
-		service.SaveOrUpdateBook(book, userId, db)
+		bookId, err := service.SaveOrUpdateBook(book, userId, db)
+		if err != nil {
+			fmt.Print(bookId)
+			// log
+			// error response
+		}
 		fmt.Fprintf(w, "")
 	}
 }
@@ -56,7 +69,11 @@ func UpdateBookHandler(db *sql.DB) http.HandlerFunc {
 func DeleteBookHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.Atoi(r.PathValue("id"))
-		service.DeleteBook(id, db)
+		err := service.DeleteBook(id, db)
+		if err != nil {
+			// log
+			// error response
+		}
 		fmt.Fprintf(w, "")
 	}
 }
