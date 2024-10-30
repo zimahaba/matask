@@ -15,7 +15,12 @@ import (
 func GetProjectHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.Atoi(r.PathValue("id"))
-		p := service.FindProject(id, db)
+		userId := r.Context().Value(handler.UserIdKey).(int)
+		p, err := service.FindProject(id, userId, db)
+		if err != nil {
+			// log
+			// error response
+		}
 		json.NewEncoder(w).Encode(resource.FromProject(p))
 	}
 }
@@ -29,7 +34,11 @@ func CreateProjectHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		userId := r.Context().Value(handler.UserIdKey).(int)
-		projectId := service.SaveOrUpdateProject(p.ToProject(), userId, db)
+		projectId, err := service.SaveOrUpdateProject(p.ToProject(), userId, db)
+		if err != nil {
+			// log
+			// error response
+		}
 		json.NewEncoder(w).Encode(resource.IdResource{Id: projectId})
 	}
 }
@@ -46,7 +55,12 @@ func UpdateProjectHandler(db *sql.DB) http.HandlerFunc {
 		project := p.ToProject()
 		project.Id = id
 		userId := r.Context().Value(handler.UserIdKey).(int)
-		service.SaveOrUpdateProject(project, userId, db)
+		projectId, err := service.SaveOrUpdateProject(project, userId, db)
+		if err != nil {
+			fmt.Print(projectId)
+			// log
+			// error response
+		}
 		fmt.Fprintf(w, "")
 	}
 }
@@ -54,7 +68,11 @@ func UpdateProjectHandler(db *sql.DB) http.HandlerFunc {
 func DeleteProjectHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.Atoi(r.PathValue("id"))
-		service.DeleteProject(id, db)
+		err := service.DeleteProject(id, db)
+		if err != nil {
+			// log
+			// error response
+		}
 		fmt.Fprintf(w, "")
 	}
 }

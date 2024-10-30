@@ -9,10 +9,20 @@ import (
 	"github.com/lib/pq"
 )
 
-var findTasksSelectSql = "SELECT t.id, t.name, t.type, t.started, t.ended"
+var findTasksSelectSql = `
+		SELECT t.id, t.name, t.type, t.started, t.ended,
+			CASE
+				WHEN t.type = 'project' THEN p.id
+				WHEN t.type = 'book' then b.id
+				WHEN t.type = 'movie' then m.id
+			END
+		`
 var findTasksSelectCountSql = "SELECT COUNT(t.id)"
 var findTasksFromWhereSql = `
 		FROM task t
+		LEFT OUTER JOIN project p ON p.task_fk = t.id
+		LEFT OUTER JOIN book b ON b.task_fk = t.id
+		LEFT OUTER JOIN movie m ON m.task_fk = t.id
 		WHERE ($1 = '' OR UPPER(t.name) like '%' || UPPER($1) || '%')
 		AND ($2 = '' OR t.type = $2)
 		AND (CAST($3 AS DATE) IS NULL OR t.started >= CAST($3 AS DATE))
@@ -26,7 +36,7 @@ var findTaskPageSql = " OFFSET $8 LIMIT $9 "
 
 const (
 	insertTaskSql = "INSERT INTO task (name, type, started, ended, created, user_fk) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id"
-	updateTaskSql = "UPDATE task SET name = $2, started = $3, ended = $4 WHERE id = $1"
+	updateTaskSql = "UPDATE task SET name = $3, started = $4, ended = $5 WHERE id = $1 AND user_fk = $2"
 	deleteTaskSql = "DELETE FROM task WHERE id = $1"
 )
 
@@ -64,7 +74,7 @@ func FindTasks(f model.TaskFilter, db *sql.DB) (model.TaskPageResult, error) {
 		offset = (f.Page - 1) * f.Size
 	}
 
-	rows, err := db.Query(query, f.Name, f.Type, f.Started1, f.Started2, f.Ended1, f.Ended2, f.UserId, offset)
+	rows, err := db.Query(query, f.Name, f.Type, f.Started1, f.Started2, f.Ended1, f.Ended2, f.UserId, offset, f.Size)
 	if err != nil {
 		return model.TaskPageResult{}, err
 	}
@@ -73,19 +83,18 @@ func FindTasks(f model.TaskFilter, db *sql.DB) (model.TaskPageResult, error) {
 	var tasks []model.TaskProjection
 
 	for rows.Next() {
-		var t model.Task
+		var taskProjection model.TaskProjection
 		var started pq.NullTime
 		var ended pq.NullTime
-		if err := rows.Scan(&t.Id, &t.Name, &t.Type, &started, &ended); err != nil {
+		if err := rows.Scan(&taskProjection.Task.Id, &taskProjection.Task.Name, &taskProjection.Task.Type, &started, &ended, &taskProjection.ChildId); err != nil {
 			return model.TaskPageResult{}, err
 		}
 		if started.Valid {
-			t.Started = started.Time
+			taskProjection.Task.Started = started.Time
 		}
 		if ended.Valid {
-			t.Ended = ended.Time
+			taskProjection.Task.Ended = ended.Time
 		}
-		taskProjection := model.TaskProjection{Task: t}
 		tasks = append(tasks, taskProjection)
 	}
 	if err = rows.Err(); err != nil {
@@ -102,7 +111,7 @@ func FindTasks(f model.TaskFilter, db *sql.DB) (model.TaskPageResult, error) {
 	return pageResult, nil
 }
 
-func SaveOrUpdateTask(t model.Task, userId int, tx *sql.Tx) int {
+func SaveOrUpdateTask(t model.Task, userId int, tx *sql.Tx) (int, error) {
 	var started *time.Time
 	if !t.Started.IsZero() {
 		started = &t.Started
@@ -118,17 +127,17 @@ func SaveOrUpdateTask(t model.Task, userId int, tx *sql.Tx) int {
 	if t.Id == 0 {
 		err = tx.QueryRow(insertTaskSql, t.Name, t.Type, started, ended, now, userId).Scan(&id)
 	} else {
-		_, err = tx.Exec(updateTaskSql, t.Id, t.Name, started, ended)
+		_, err = tx.Exec(updateTaskSql, t.Id, userId, t.Name, started, ended)
 		id = t.Id
 	}
 
 	if err != nil {
-		panic(err)
+		return -1, err
 	}
-	return id
+	return id, nil
 }
 
-func DeleteTaskCascade(childId int, childType string, db *sql.DB) {
+func DeleteTaskCascade(childId int, childType string, db *sql.DB) error {
 	var findTaskIdSql string
 	var deleteChildSql string
 	if childType == "project" {
@@ -144,24 +153,25 @@ func DeleteTaskCascade(childId int, childType string, db *sql.DB) {
 
 	tx, err := db.Begin()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer tx.Rollback()
 
 	var taskId int
 	if err := tx.QueryRow(findTaskIdSql, childId).Scan(&taskId); err != nil {
-		panic(err)
+		return err
 	}
 	_, err = tx.Exec(deleteChildSql, childId)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	_, err = tx.Exec(deleteTaskSql, taskId)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	if err = tx.Commit(); err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }

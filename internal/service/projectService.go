@@ -6,14 +6,14 @@ import (
 	"matask/internal/model"
 )
 
-func FindProject(id int, db *sql.DB) model.Project {
-	return database.FindProject(id, db)
+func FindProject(id int, userId int, db *sql.DB) (model.Project, error) {
+	return database.FindProject(id, userId, db)
 }
 
-func SaveOrUpdateProject(p model.Project, userId int, db *sql.DB) int {
+func SaveOrUpdateProject(p model.Project, userId int, db *sql.DB) (int, error) {
 	return database.SaveOrUpdateProject(p, userId, db)
 }
 
-func DeleteProject(projectId int, db *sql.DB) {
-	database.DeleteTaskCascade(projectId, "project", db)
+func DeleteProject(projectId int, db *sql.DB) error {
+	return database.DeleteTaskCascade(projectId, "project", db)
 }

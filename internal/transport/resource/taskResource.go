@@ -23,7 +23,7 @@ func FromTaskPageResult(result model.TaskPageResult) TaskPageResource {
 	tasks := []TaskResource{}
 	for i := 0; i < len(result.Tasks); i++ {
 		t := result.Tasks[i]
-		resource := TaskResource{Id: t.Task.Id, Name: t.Task.Name, Type: t.Task.Type, Started: Date{t.Task.Started}, Ended: Date{t.Task.Ended}}
+		resource := TaskResource{Id: t.Task.Id, Name: t.Task.Name, Type: t.Task.Type, Started: Date{t.Task.Started}, Ended: Date{t.Task.Ended}, ChildId: t.ChildId}
 		tasks = append(tasks, resource)
 	}
 	return TaskPageResource{
