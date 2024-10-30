@@ -20,8 +20,8 @@ func GetTasksHandler(db *sql.DB) http.HandlerFunc {
 		filter.UserId = r.Context().Value(handler.UserIdKey).(int)
 		result, err := service.FindTasks(filter, db)
 		if err != nil {
-			slog.Debug(err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		json.NewEncoder(w).Encode(resource.FromTaskPageResult(result))
 	}
@@ -30,29 +30,38 @@ func GetTasksHandler(db *sql.DB) http.HandlerFunc {
 func UploadImageHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.Atoi(r.PathValue("id"))
+		userId := r.Context().Value(handler.UserIdKey).(int)
 
 		r.ParseMultipartForm(2 << 20)
 		file, _, err := r.FormFile("image")
 		if err != nil {
 			errStr := fmt.Sprintf("Error in reading the file %s\n", err)
-			fmt.Println(errStr)
-			fmt.Fprintf(w, "Error in reading the file")
+			slog.Error(errStr)
+			http.Error(w, errStr, http.StatusInternalServerError)
 			return
 		}
 		defer file.Close()
 		filebytes, err := io.ReadAll(file)
 		if err != nil {
 			errStr := fmt.Sprintf("Error in reading the file buffer %s\n", err)
-			fmt.Println(errStr)
-			fmt.Fprintf(w, "Error in reading the file buffer")
+			slog.Error(errStr)
+			http.Error(w, errStr, http.StatusInternalServerError)
 			return
 		}
 
 		taskType := r.FormValue("type")
 		if taskType == "book" {
-			service.UpdateBookCover(id, filebytes, db)
+			err = service.UpdateBookCover(id, filebytes, userId, db)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		} else if taskType == "movie" {
-			service.UpdateMoviePoster(id, filebytes, db)
+			err = service.UpdateMoviePoster(id, filebytes, userId, db)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 
 		fmt.Fprintf(w, "")

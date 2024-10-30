@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"log/slog"
 	"matask/internal/model"
 
 	"github.com/lib/pq"
@@ -13,15 +14,21 @@ const (
 		FROM movie m
 		INNER JOIN task t ON t.id = m.task_fk
 		WHERE m.id = $1
+		AND t.user_fk = $2
 	`
-	findMovieTaskIdSql   = "SELECT t.id FROM movie m INNER JOIN task t ON t.id = m.task_fk WHERE m.id = $1"
-	insertMovieSql       = "INSERT INTO movie (synopsis, comments, year, rate, director, actors, poster_path, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id"
-	updateMovieSql       = "UPDATE movie SET synopsis = $2, comments = $3, year = $4, rate = $5, director = $6, actors = $7 WHERE id = $1"
-	updateMoviePosterSql = "UPDATE movie SET poster_path = $2 WHERE id = $1"
-	deleteMovieSql       = "DELETE FROM movie WHERE id = $1"
+	findMovieTaskIdSql = "SELECT t.id FROM movie m INNER JOIN task t ON t.id = m.task_fk WHERE m.id = $1 AND t.user_fk = $2"
+	insertMovieSql     = "INSERT INTO movie (synopsis, comments, year, rate, director, actors, poster_path, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id"
+	updateMovieSql     = `
+		UPDATE movie m
+		SET synopsis = $3, comments = $4, year = $5, rate = $6, director = $7, actors = $8 
+		FROM task t
+		WHERE t.id = m.task_fk AND m.id = $1 AND t.user_fk = $2
+		`
+	updateMoviePosterSql = "UPDATE movie SET poster_path = $3 FROM task t WHERE WHERE t.id = m.task_fk AND m.id = $1 AND t.user_fk = $2"
+	deleteMovieSql       = "DELETE FROM movie m USING task t WHERE t.id = m.task_fk AND m.id = $1 AND t.user_fk = $2"
 )
 
-func FindMovie(id int, db *sql.DB) (model.Movie, error) {
+func FindMovie(id int, userId int, db *sql.DB) (model.Movie, error) {
 	var m model.Movie
 	var synopsis sql.NullString
 	var comments sql.NullString
@@ -31,7 +38,8 @@ func FindMovie(id int, db *sql.DB) (model.Movie, error) {
 	var coverPath sql.NullString
 	var started pq.NullTime
 	var ended pq.NullTime
-	if err := db.QueryRow(findMovieSql, id).Scan(&m.Id, &synopsis, &comments, &year, &rate, &director, &m.Actors, &coverPath, &m.Task.Name, &started, &ended); err != nil {
+	if err := db.QueryRow(findMovieSql, id, userId).Scan(&m.Id, &synopsis, &comments, &year, &rate, &director, &m.Actors, &coverPath, &m.Task.Name, &started, &ended); err != nil {
+		slog.Error(err.Error())
 		return model.Movie{}, err
 	}
 	if synopsis.Valid {
@@ -64,13 +72,15 @@ func FindMovie(id int, db *sql.DB) (model.Movie, error) {
 func SaveOrUpdateMovie(m model.Movie, userId int, db *sql.DB) (int, error) {
 	tx, err := db.Begin()
 	if err != nil {
+		slog.Error(err.Error())
 		return -1, err
 	}
 	defer tx.Rollback()
 
 	if m.Id != 0 {
 		var taskId int
-		if err := tx.QueryRow(findMovieTaskIdSql, m.Id).Scan(&taskId); err != nil {
+		if err := tx.QueryRow(findMovieTaskIdSql, m.Id, userId).Scan(&taskId); err != nil {
+			slog.Error(err.Error())
 			return -1, err
 		}
 		m.Task.Id = taskId
@@ -78,6 +88,7 @@ func SaveOrUpdateMovie(m model.Movie, userId int, db *sql.DB) (int, error) {
 
 	taskId, err := SaveOrUpdateTask(m.Task, userId, tx)
 	if err != nil {
+		slog.Error(err.Error())
 		return -1, err
 	}
 
@@ -108,26 +119,30 @@ func SaveOrUpdateMovie(m model.Movie, userId int, db *sql.DB) (int, error) {
 	}
 
 	if m.Id == 0 {
-		err := tx.QueryRow(insertMovieSql, synopsis, comments, year, rate, director, m.Actors, posterPath, taskId).Scan(&id)
-		if err != nil {
-			return -1, err
-		}
+		err = tx.QueryRow(insertMovieSql, synopsis, comments, year, rate, director, m.Actors, posterPath, taskId).Scan(&id)
 	} else {
-		_, err = tx.Exec(updateMovieSql, m.Id, synopsis, comments, year, rate, director, m.Actors)
-		if err != nil {
-			return -1, err
-		}
+		_, err = tx.Exec(updateMovieSql, m.Id, userId, synopsis, comments, year, rate, director, m.Actors)
 		id = m.Id
 	}
 
+	if err != nil {
+		slog.Error(err.Error())
+		return -1, err
+	}
+
 	if err = tx.Commit(); err != nil {
+		slog.Error(err.Error())
 		return -1, err
 	}
 
 	return id, nil
 }
 
-func UpdateMoviePoster(id int, posterPath string, tx *sql.Tx) error {
-	_, err := tx.Exec(updateMoviePosterSql, id, posterPath)
-	return err
+func UpdateMoviePoster(id int, posterPath string, userId int, tx *sql.Tx) error {
+	_, err := tx.Exec(updateMoviePosterSql, id, posterPath, userId)
+	if err != nil {
+		slog.Error(err.Error())
+		return err
+	}
+	return nil
 }

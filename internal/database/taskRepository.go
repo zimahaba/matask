@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"matask/internal/model"
 	"time"
 
@@ -37,7 +38,7 @@ var findTaskPageSql = " OFFSET $8 LIMIT $9 "
 const (
 	insertTaskSql = "INSERT INTO task (name, type, started, ended, created, user_fk) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id"
 	updateTaskSql = "UPDATE task SET name = $3, started = $4, ended = $5 WHERE id = $1 AND user_fk = $2"
-	deleteTaskSql = "DELETE FROM task WHERE id = $1"
+	deleteTaskSql = "DELETE FROM task WHERE id = $1 AND user_fk = $2"
 )
 
 var sortFieldMap = map[string]string{
@@ -64,6 +65,7 @@ func FindTasks(f model.TaskFilter, db *sql.DB) (model.TaskPageResult, error) {
 
 	var count int
 	if err := db.QueryRow(countQuery, f.Name, f.Type, f.Started1, f.Started2, f.Ended1, f.Ended2, f.UserId).Scan(&count); err != nil {
+		slog.Error(err.Error())
 		return model.TaskPageResult{}, err
 	}
 
@@ -76,6 +78,7 @@ func FindTasks(f model.TaskFilter, db *sql.DB) (model.TaskPageResult, error) {
 
 	rows, err := db.Query(query, f.Name, f.Type, f.Started1, f.Started2, f.Ended1, f.Ended2, f.UserId, offset, f.Size)
 	if err != nil {
+		slog.Error(err.Error())
 		return model.TaskPageResult{}, err
 	}
 	defer rows.Close()
@@ -87,6 +90,7 @@ func FindTasks(f model.TaskFilter, db *sql.DB) (model.TaskPageResult, error) {
 		var started pq.NullTime
 		var ended pq.NullTime
 		if err := rows.Scan(&taskProjection.Task.Id, &taskProjection.Task.Name, &taskProjection.Task.Type, &started, &ended, &taskProjection.ChildId); err != nil {
+			slog.Error(err.Error())
 			return model.TaskPageResult{}, err
 		}
 		if started.Valid {
@@ -98,6 +102,7 @@ func FindTasks(f model.TaskFilter, db *sql.DB) (model.TaskPageResult, error) {
 		tasks = append(tasks, taskProjection)
 	}
 	if err = rows.Err(); err != nil {
+		slog.Error(err.Error())
 		return model.TaskPageResult{}, err
 	}
 
@@ -132,12 +137,13 @@ func SaveOrUpdateTask(t model.Task, userId int, tx *sql.Tx) (int, error) {
 	}
 
 	if err != nil {
+		slog.Error(err.Error())
 		return -1, err
 	}
 	return id, nil
 }
 
-func DeleteTaskCascade(childId int, childType string, db *sql.DB) error {
+func DeleteTaskCascade(childId int, childType string, userId int, db *sql.DB) error {
 	var findTaskIdSql string
 	var deleteChildSql string
 	if childType == "project" {
@@ -153,24 +159,29 @@ func DeleteTaskCascade(childId int, childType string, db *sql.DB) error {
 
 	tx, err := db.Begin()
 	if err != nil {
+		slog.Error(err.Error())
 		return err
 	}
 	defer tx.Rollback()
 
 	var taskId int
-	if err := tx.QueryRow(findTaskIdSql, childId).Scan(&taskId); err != nil {
+	if err := tx.QueryRow(findTaskIdSql, childId, userId).Scan(&taskId); err != nil {
+		slog.Error(err.Error())
 		return err
 	}
-	_, err = tx.Exec(deleteChildSql, childId)
+	_, err = tx.Exec(deleteChildSql, childId, userId)
 	if err != nil {
+		slog.Error(err.Error())
 		return err
 	}
-	_, err = tx.Exec(deleteTaskSql, taskId)
+	_, err = tx.Exec(deleteTaskSql, taskId, userId)
 	if err != nil {
+		slog.Error(err.Error())
 		return err
 	}
 
 	if err = tx.Commit(); err != nil {
+		slog.Error(err.Error())
 		return err
 	}
 	return nil

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"matask/internal/service"
 	"matask/internal/transport/handler"
 	"matask/internal/transport/request"
@@ -15,10 +16,11 @@ import (
 func GetMovieHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.Atoi(r.PathValue("id"))
-		m, err := service.FindMovie(id, db)
+		userId := r.Context().Value(handler.UserIdKey).(int)
+		m, err := service.FindMovie(id, userId, db)
 		if err != nil {
-			// log
-			// error response
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		json.NewEncoder(w).Encode(resource.FromMovie(m))
 	}
@@ -26,10 +28,10 @@ func GetMovieHandler(db *sql.DB) http.HandlerFunc {
 
 func CreateMovieHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		var m request.MovieRequest
 		err := json.NewDecoder(r.Body).Decode(&m)
 		if err != nil {
+			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -37,8 +39,8 @@ func CreateMovieHandler(db *sql.DB) http.HandlerFunc {
 		userId := r.Context().Value(handler.UserIdKey).(int)
 		movieId, err := service.SaveOrUpdateMovie(m.ToMovie(), userId, db)
 		if err != nil {
-			// log
-			// error response
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		json.NewEncoder(w).Encode(resource.IdResource{Id: movieId})
 	}
@@ -50,13 +52,18 @@ func UpdateMovieHandler(db *sql.DB) http.HandlerFunc {
 		var m request.MovieRequest
 		err := json.NewDecoder(r.Body).Decode(&m)
 		if err != nil {
+			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		movie := m.ToMovie()
 		movie.Id = id
 		userId := r.Context().Value(handler.UserIdKey).(int)
-		service.SaveOrUpdateMovie(movie, userId, db)
+		_, err = service.SaveOrUpdateMovie(movie, userId, db)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		fmt.Fprintf(w, "")
 	}
 }
@@ -64,7 +71,12 @@ func UpdateMovieHandler(db *sql.DB) http.HandlerFunc {
 func DeleteMovieHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.Atoi(r.PathValue("id"))
-		service.DeleteMovie(id, db)
+		userId := r.Context().Value(handler.UserIdKey).(int)
+		err := service.DeleteMovie(id, userId, db)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		fmt.Fprintf(w, "")
 	}
 }

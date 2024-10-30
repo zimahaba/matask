@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"matask/internal/model"
 )
 
@@ -17,6 +18,7 @@ const (
 func FindUser(id int, db *sql.DB) (model.MataskUser, error) {
 	var user model.MataskUser
 	if err := db.QueryRow(findUserSql, id).Scan(&user.Id, &user.Name, &user.Email); err != nil {
+		slog.Error(err.Error())
 		return user, err
 	}
 	return user, nil
@@ -25,6 +27,7 @@ func FindUser(id int, db *sql.DB) (model.MataskUser, error) {
 func FindUserId(email string, db *sql.DB) (int, error) {
 	var userId int
 	if err := db.QueryRow(findUserIdSql, email).Scan(&userId); err != nil {
+		slog.Error(err.Error())
 		return userId, err
 	}
 	return userId, nil
@@ -33,6 +36,7 @@ func FindUserId(email string, db *sql.DB) (int, error) {
 func FindPassword(username string, db *sql.DB) (string, error) {
 	var password string
 	if err := db.QueryRow(findPasswordSql, username).Scan(&password); err != nil {
+		slog.Error(err.Error())
 		return "", err
 	}
 	return password, nil
@@ -41,7 +45,8 @@ func FindPassword(username string, db *sql.DB) (string, error) {
 func SaveOrUpdateUser(u model.MataskUser, db *sql.DB) error {
 	tx, err := db.Begin()
 	if err != nil {
-		panic(err)
+		slog.Error(err.Error())
+		return err
 	}
 	defer tx.Rollback()
 
@@ -49,6 +54,7 @@ func SaveOrUpdateUser(u model.MataskUser, db *sql.DB) error {
 	if u.Id == 0 {
 		credentialsId, err = SaveUserCredentials(u.Credentials, tx)
 		if err != nil {
+			slog.Error(err.Error())
 			return err
 		}
 	}
@@ -57,17 +63,20 @@ func SaveOrUpdateUser(u model.MataskUser, db *sql.DB) error {
 	if u.Id == 0 {
 		err = tx.QueryRow(insertUserSql, u.Name, u.Email, credentialsId).Scan(&id)
 		if err != nil {
-			panic(err)
+			slog.Error(err.Error())
+			return err
 		}
 	} else {
 		_, err = tx.Exec("", u.Id, u.Name)
 		if err != nil {
-			panic(err)
+			slog.Error(err.Error())
+			return err
 		}
 		id = u.Id
 	}
 
 	if err = tx.Commit(); err != nil {
+		slog.Error(err.Error())
 		return err
 	}
 
@@ -79,6 +88,7 @@ func SaveUserCredentials(c model.UserCredentials, tx *sql.Tx) (int, error) {
 	fmt.Println(c.Username)
 	err := tx.QueryRow(insertCredentialsSql, c.Username, c.Password).Scan(&id)
 	if err != nil {
+		slog.Error(err.Error())
 		return id, err
 	}
 	return id, nil

@@ -7,37 +7,38 @@ import (
 	"os"
 )
 
-func FindMovie(id int, db *sql.DB) (model.Movie, error) {
-	return database.FindMovie(id, db)
+func FindMovie(id int, userId int, db *sql.DB) (model.Movie, error) {
+	return database.FindMovie(id, userId, db)
 }
 
 func SaveOrUpdateMovie(p model.Movie, userId int, db *sql.DB) (int, error) {
 	return database.SaveOrUpdateMovie(p, userId, db)
 }
 
-func UpdateMoviePoster(id int, filebytes []byte, db *sql.DB) {
+func UpdateMoviePoster(id int, filebytes []byte, userId int, db *sql.DB) error {
 	tx, err := db.Begin()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer tx.Rollback()
 
 	posterPath := os.Getenv("POSTER_PATH") + "poster"
-	err = database.UpdateMoviePoster(id, posterPath, tx)
+	err = database.UpdateMoviePoster(id, posterPath, userId, tx)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	err = os.WriteFile(posterPath, filebytes, 0666)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	if err = tx.Commit(); err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
-func DeleteMovie(movieId int, db *sql.DB) error {
-	return database.DeleteTaskCascade(movieId, "movie", db)
+func DeleteMovie(movieId int, userId int, db *sql.DB) error {
+	return database.DeleteTaskCascade(movieId, "movie", userId, db)
 }

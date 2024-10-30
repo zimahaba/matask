@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 	"log/slog"
 	"matask/internal/service"
 	"matask/internal/transport/handler"
@@ -22,20 +21,21 @@ func SignupHandler(db *sql.DB) http.HandlerFunc {
 		err := json.NewDecoder(r.Body).Decode(&userRequest)
 		if err != nil {
 			slog.Error(err.Error())
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		password, err := bcrypt.GenerateFromPassword([]byte(userRequest.Password), bcrypt.DefaultCost)
 		if err != nil {
-			panic(err)
+			slog.Error(err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		user := userRequest.ToUser(string(password))
 		err = service.CreateUser(user, db)
 		if err != nil {
-			log.Print(err)
-			http.Error(w, err.Error(), 400)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		fmt.Fprint(w)
@@ -47,11 +47,14 @@ func LoginHandler(db *sql.DB) http.HandlerFunc {
 		var creds request.CredentialsRequest
 		err := json.NewDecoder(r.Body).Decode(&creds)
 		if err != nil {
-			panic(err)
+			slog.Error(err.Error())
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 
 		err = service.VerifyCredentials(creds.Username, creds.Password, db)
 		if err != nil {
+			slog.Error(err.Error())
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
@@ -90,7 +93,6 @@ func AuthCheckHandler(db *sql.DB) http.HandlerFunc {
 		userId := r.Context().Value(handler.UserIdKey).(int)
 		user, err := service.FindUser(userId, db)
 		if err != nil {
-			log.Print(err)
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}

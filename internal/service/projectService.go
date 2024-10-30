@@ -14,6 +14,6 @@ func SaveOrUpdateProject(p model.Project, userId int, db *sql.DB) (int, error) {
 	return database.SaveOrUpdateProject(p, userId, db)
 }
 
-func DeleteProject(projectId int, db *sql.DB) error {
-	return database.DeleteTaskCascade(projectId, "project", db)
+func DeleteProject(projectId int, userId int, db *sql.DB) error {
+	return database.DeleteTaskCascade(projectId, "project", userId, db)
 }

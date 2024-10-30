@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"log/slog"
 	"matask/internal/model"
 
 	"github.com/lib/pq"
@@ -23,7 +24,7 @@ const (
 		FROM task t 
 		WHERE t.id = p.task_fk AND p.id = $1 AND t.user_fk = $2
 	`
-	deleteProjectSql = "DELETE FROM project WHERE id = $1"
+	deleteProjectSql = "DELETE FROM project p USING task t WHERE t.id = p.task_fk AND p.id = $1 AND t.user_fk = $2"
 )
 
 func FindProject(id int, userId int, db *sql.DB) (model.Project, error) {
@@ -32,6 +33,7 @@ func FindProject(id int, userId int, db *sql.DB) (model.Project, error) {
 	var started pq.NullTime
 	var ended pq.NullTime
 	if err := db.QueryRow(findProjectSql, id, userId).Scan(&p.Id, &description, &p.Progress, &p.DynamicFields, &p.Task.Id, &p.Task.Name, &p.Task.Type, &started, &ended); err != nil {
+		slog.Error(err.Error())
 		return model.Project{}, err
 	}
 	if description.Valid {
@@ -49,6 +51,7 @@ func FindProject(id int, userId int, db *sql.DB) (model.Project, error) {
 func SaveOrUpdateProject(p model.Project, userId int, db *sql.DB) (int, error) {
 	tx, err := db.Begin()
 	if err != nil {
+		slog.Error(err.Error())
 		return -1, err
 	}
 	defer tx.Rollback()
@@ -56,6 +59,7 @@ func SaveOrUpdateProject(p model.Project, userId int, db *sql.DB) (int, error) {
 	if p.Id != 0 {
 		var taskId int
 		if err := tx.QueryRow(findProjectTaskIdSql, p.Id, userId).Scan(&taskId); err != nil {
+			slog.Error(err.Error())
 			return -1, err
 		}
 		p.Task.Id = taskId
@@ -63,6 +67,7 @@ func SaveOrUpdateProject(p model.Project, userId int, db *sql.DB) (int, error) {
 
 	taskId, err := SaveOrUpdateTask(p.Task, userId, tx)
 	if err != nil {
+		slog.Error(err.Error())
 		return -1, err
 	}
 
@@ -74,18 +79,18 @@ func SaveOrUpdateProject(p model.Project, userId int, db *sql.DB) (int, error) {
 
 	if p.Id == 0 {
 		err = tx.QueryRow(insertProjectSql, description, p.Progress, p.DynamicFields, taskId).Scan(&id)
-		if err != nil {
-			return -1, err
-		}
 	} else {
 		_, err = tx.Exec(updateProjectSql, p.Id, userId, description, p.Progress, p.DynamicFields)
-		if err != nil {
-			return -1, err
-		}
 		id = p.Id
 	}
 
+	if err != nil {
+		slog.Error(err.Error())
+		return -1, err
+	}
+
 	if err = tx.Commit(); err != nil {
+		slog.Error(err.Error())
 		return -1, err
 	}
 
