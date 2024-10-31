@@ -16,9 +16,10 @@ const (
 		WHERE b.id = $1 
 		AND t.user_fk = $2
 	`
-	findBookTaskIdSql = "SELECT t.id FROM book b INNER JOIN task t ON t.id = b.task_fk WHERE b.id = $1 AND t.user_fk = $2"
-	insertBookSql     = "INSERT INTO book (progress, author, synopsis, comments, year, rate, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
-	updateBookSql     = `
+	findBookTaskIdSql    = "SELECT t.id FROM book b INNER JOIN task t ON t.id = b.task_fk WHERE b.id = $1 AND t.user_fk = $2"
+	findBookCoverPathSql = "SELECT b.cover_path FROM book b INNER JOIN task t ON t.id = b.task_fk WHERE b.id = $1 AND t.user_fk = $2"
+	insertBookSql        = "INSERT INTO book (progress, author, synopsis, comments, year, rate, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
+	updateBookSql        = `
 		UPDATE book b
 		SET progress = $3, author = $4, synopsis = $5, comments = $6, year = $7, rate = $8
 		FROM task t 
@@ -67,6 +68,15 @@ func FindBook(id int, userId int, db *sql.DB) (model.Book, error) {
 		b.Task.Ended = ended.Time
 	}
 	return b, nil
+}
+
+func FindBookCoverPath(id int, userId int, db *sql.DB) (string, error) {
+	var coverPath string
+	if err := db.QueryRow(findBookCoverPathSql, id, userId).Scan(&coverPath); err != nil {
+		slog.Error(err.Error())
+		return "", err
+	}
+	return coverPath, nil
 }
 
 func SaveOrUpdateBook(b model.Book, userId int, db *sql.DB) (int, error) {

@@ -10,6 +10,7 @@ import (
 	"matask/internal/transport/request"
 	"matask/internal/transport/resource"
 	"net/http"
+	"os"
 	"strconv"
 )
 
@@ -23,6 +24,27 @@ func GetBookHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		json.NewEncoder(w).Encode(resource.FromBook(b))
+	}
+}
+
+func GetBookCoverHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.Atoi(r.PathValue("id"))
+		userId := r.Context().Value(handler.UserIdKey).(int)
+		coverPath, err := service.FindBookCoverPath(id, userId, db)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		fileBytes, err := os.ReadFile(coverPath)
+		if err != nil {
+			http.Error(w, "Image not found.", http.StatusNotFound)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.WriteHeader(http.StatusOK)
+		w.Write(fileBytes)
 	}
 }
 
