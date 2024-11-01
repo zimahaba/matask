@@ -45,7 +45,6 @@ const (
 )
 
 func FindFilteredBooks(f model.BookFilter, db *sql.DB) (model.BookPageResult, error) {
-	fmt.Printf("filter: %v.\n", f)
 	sortField := sortFieldMap[f.SortField]
 	if sortField == "" {
 		sortField = "id"
@@ -77,7 +76,7 @@ func FindFilteredBooks(f model.BookFilter, db *sql.DB) (model.BookPageResult, er
 	} else {
 		offset = (f.Page - 1) * f.Size
 	}
-	fmt.Printf("Query: %v.\n", query)
+
 	rows, err := db.Query(query, f.Name, f.Author, progress1, progress2, f.UserId, offset, f.Size)
 	if err != nil {
 		slog.Error(err.Error())

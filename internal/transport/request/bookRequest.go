@@ -1,6 +1,7 @@
 package request
 
 import (
+	"fmt"
 	"matask/internal/model"
 	"strconv"
 )
@@ -38,6 +39,7 @@ func (request BookRequest) ToBook() model.Book {
 }
 
 func ToBookFilter(query map[string][]string) model.BookFilter {
+	fmt.Printf("map: %v.\n", query)
 	var filter model.BookFilter
 	if len(query["name"]) > 0 {
 		filter.Name = query["name"][0]
@@ -52,6 +54,8 @@ func ToBookFilter(query map[string][]string) model.BookFilter {
 		} else {
 			filter.Progress1 = p1
 		}
+	} else {
+		filter.Progress1 = -1
 	}
 	if len(query["progress2"]) > 0 {
 		p2, err := strconv.Atoi(query["progress2"][0])
@@ -60,16 +64,18 @@ func ToBookFilter(query map[string][]string) model.BookFilter {
 		} else {
 			filter.Progress2 = p2
 		}
+	} else {
+		filter.Progress2 = -1
 	}
 	if len(query["page"]) > 0 {
 		page, err := strconv.Atoi(query["page"][0])
 		if err != nil {
-			filter.Page = 0
+			filter.Page = 1
 		} else {
 			filter.Page = page
 		}
 	} else {
-		filter.Page = 0
+		filter.Page = 1
 	}
 	if len(query["size"]) > 0 {
 		size, err := strconv.Atoi(query["size"][0])

@@ -5,7 +5,7 @@ import (
 )
 
 type BookResource struct {
-	Id       int    `json:"id"omm`
+	Id       int    `json:"id"`
 	Name     string `json:"name"`
 	Started  Date   `json:"started,omitempty"`
 	Ended    Date   `json:"ended,omitempty"`
@@ -33,11 +33,11 @@ func FromBook(b model.Book) BookResource {
 }
 
 type BookPageResource struct {
-	Books         []BookResource
-	Page          int
-	Size          int
-	TotalPages    int
-	TotalElements int
+	Books         []BookResource `json:"books"`
+	Page          int            `json:"page"`
+	Size          int            `json:"size"`
+	TotalPages    int            `json:"totalPages"`
+	TotalElements int            `json:"totalElements"`
 }
 
 func FromBookPageResult(result model.BookPageResult) BookPageResource {
