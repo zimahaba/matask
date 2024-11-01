@@ -5,16 +5,16 @@ import (
 )
 
 type BookResource struct {
-	Id       int    `json:"id"`
+	Id       int    `json:"id"omm`
 	Name     string `json:"name"`
-	Started  Date   `json:"started"`
-	Ended    Date   `json:"ended"`
+	Started  Date   `json:"started,omitempty"`
+	Ended    Date   `json:"ended,omitempty"`
 	Progress int    `json:"progress"`
 	Author   string `json:"author"`
-	Synopsis string `json:"synopsis"`
-	Comments string `json:"comments"`
-	Year     string `json:"year"`
-	Rate     int    `json:"rate"`
+	Synopsis string `json:"synopsis,omitempty"`
+	Comments string `json:"comments,omitempty"`
+	Year     string `json:"year,omitempty"`
+	Rate     int    `json:"rate,omitempty"`
 }
 
 func FromBook(b model.Book) BookResource {
@@ -29,5 +29,29 @@ func FromBook(b model.Book) BookResource {
 		Comments: b.Comments,
 		Year:     b.Year,
 		Rate:     b.Rate,
+	}
+}
+
+type BookPageResource struct {
+	Books         []BookResource
+	Page          int
+	Size          int
+	TotalPages    int
+	TotalElements int
+}
+
+func FromBookPageResult(result model.BookPageResult) BookPageResource {
+	books := []BookResource{}
+	for i := 0; i < len(result.Books); i++ {
+		b := result.Books[i]
+		resource := BookResource{Id: b.Id, Name: b.Name, Author: b.Author, Progress: b.Progress}
+		books = append(books, resource)
+	}
+	return BookPageResource{
+		Books:         books,
+		Page:          result.Page,
+		Size:          result.Size,
+		TotalPages:    result.TotalPages,
+		TotalElements: result.TotalElements,
 	}
 }

@@ -7,6 +7,10 @@ import (
 	"os"
 )
 
+func FindFilteredBooks(f model.BookFilter, db *sql.DB) (model.BookPageResult, error) {
+	return database.FindFilteredBooks(f, db)
+}
+
 func FindBook(id int, userId int, db *sql.DB) (model.Book, error) {
 	return database.FindBook(id, userId, db)
 }

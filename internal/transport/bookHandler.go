@@ -14,6 +14,19 @@ import (
 	"strconv"
 )
 
+func GetFilteredBooksHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		filter := request.ToBookFilter(r.URL.Query())
+		filter.UserId = r.Context().Value(handler.UserIdKey).(int)
+		result, err := service.FindFilteredBooks(filter, db)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		json.NewEncoder(w).Encode(resource.FromBookPageResult(result))
+	}
+}
+
 func GetBookHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.Atoi(r.PathValue("id"))
@@ -38,7 +51,8 @@ func GetBookCoverHandler(db *sql.DB) http.HandlerFunc {
 		}
 		fileBytes, err := os.ReadFile(coverPath)
 		if err != nil {
-			http.Error(w, "Image not found.", http.StatusNotFound)
+			slog.Error(err.Error())
+			http.Error(w, "Book cover not found.", http.StatusNotFound)
 			return
 		}
 

@@ -2,11 +2,26 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 	"log/slog"
 	"matask/internal/model"
 
 	"github.com/lib/pq"
 )
+
+var findFilteredBooksSelectSql = "SELECT b.id, t.name, b.author, b.progress"
+var findFilteredBooksSelectCountSql = "SELECT COUNT(b.id)"
+var findFilteredBooksFromWhereSql = `
+		FROM book b
+		INNER JOIN task t ON t.id = b.task_fk
+		WHERE ($1 = '' OR UPPER(t.name) like '%' || UPPER($1) || '%')
+		AND ($2 = '' OR UPPER(b.author) like '%' || UPPER($2) || '%' )
+		AND (b.progress >= COALESCE(CAST($3 AS INTEGER), 0))
+		AND (b.progress <= COALESCE(CAST($4 AS INTEGER), 100))
+		AND t.user_fk = $5
+	`
+var findFilteredBooksOrderSql = " ORDER BY %s %s "
+var findFilteredBooksPageSql = " OFFSET $6 LIMIT $7 "
 
 const (
 	findBookSql = `
@@ -28,6 +43,76 @@ const (
 	updateBookCoverSql = "UPDATE book b SET cover_path = $3 FROM task t WHERE t.id = b.task_fk AND b.id = $1 AND t.user_fk = $2"
 	deleteBookSql      = "DELETE FROM book b USING task t WHERE t.id = b.task_fk AND b.id = $1 AND t.user_fk = $2"
 )
+
+func FindFilteredBooks(f model.BookFilter, db *sql.DB) (model.BookPageResult, error) {
+	fmt.Printf("filter: %v.\n", f)
+	sortField := sortFieldMap[f.SortField]
+	if sortField == "" {
+		sortField = "id"
+	}
+	sortDirection := sortDirectionMap[f.SortDirection]
+	if sortDirection == "" {
+		sortDirection = "ASC"
+	}
+	query := findFilteredBooksSelectSql + findFilteredBooksFromWhereSql + fmt.Sprintf(findFilteredBooksOrderSql, sortField, sortDirection) + findFilteredBooksPageSql
+	countQuery := findFilteredBooksSelectCountSql + findFilteredBooksFromWhereSql
+
+	var count int
+	progress1 := sql.NullInt64{}
+	if f.Progress1 >= 0 {
+		progress1 = sql.NullInt64{Int64: int64(f.Progress1), Valid: true}
+	}
+	progress2 := sql.NullInt64{}
+	if f.Progress2 >= 0 {
+		progress2 = sql.NullInt64{Int64: int64(f.Progress2), Valid: true}
+	}
+	if err := db.QueryRow(countQuery, f.Name, f.Author, progress1, progress2, f.UserId).Scan(&count); err != nil {
+		slog.Error(err.Error())
+		return model.BookPageResult{}, err
+	}
+
+	var offset int
+	if f.Page <= 1 {
+		offset = 0
+	} else {
+		offset = (f.Page - 1) * f.Size
+	}
+	fmt.Printf("Query: %v.\n", query)
+	rows, err := db.Query(query, f.Name, f.Author, progress1, progress2, f.UserId, offset, f.Size)
+	if err != nil {
+		slog.Error(err.Error())
+		return model.BookPageResult{}, err
+	}
+	defer rows.Close()
+
+	var books []model.BookProjection
+
+	for rows.Next() {
+		var bookProjection model.BookProjection
+		var author sql.NullString
+		if err := rows.Scan(&bookProjection.Id, &bookProjection.Name, &author, &bookProjection.Progress); err != nil {
+			slog.Error(err.Error())
+			return model.BookPageResult{}, err
+		}
+		if author.Valid {
+			bookProjection.Author = author.String
+		}
+		books = append(books, bookProjection)
+	}
+	if err = rows.Err(); err != nil {
+		slog.Error(err.Error())
+		return model.BookPageResult{}, err
+	}
+
+	totalPages := count / f.Size
+	remainder := count % f.Size
+	if totalPages == 0 || (totalPages > 0 && remainder > 0) {
+		totalPages++
+	}
+
+	pageResult := model.BookPageResult{Books: books, Page: f.Page, Size: f.Size, TotalPages: totalPages, TotalElements: count}
+	return pageResult, nil
+}
 
 func FindBook(id int, userId int, db *sql.DB) (model.Book, error) {
 	var b model.Book

@@ -65,6 +65,7 @@ func main() {
 	mux.HandleFunc("DELETE /projects/{id}", auth(transport.DeleteProjectHandler(db), db))
 
 	mux.HandleFunc("GET /books/{id}", auth(transport.GetBookHandler(db), db))
+	mux.HandleFunc("GET /books", auth(transport.GetFilteredBooksHandler(db), db))
 	mux.HandleFunc("GET /books/cover/{id}", auth(transport.GetBookCoverHandler(db), db))
 	mux.HandleFunc("POST /books", auth(transport.CreateBookHandler(db), db))
 	mux.HandleFunc("PUT /books/{id}", auth(transport.UpdateBookHandler(db), db))
