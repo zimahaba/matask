@@ -16,8 +16,8 @@ type BookRequest struct {
 	Synopsis string
 	Comments string
 	Year     string
+	Genre    string
 	Rate     int
-	//CoverImage
 }
 
 func (request BookRequest) ToBook() model.Book {
@@ -33,9 +33,9 @@ func (request BookRequest) ToBook() model.Book {
 		Synopsis: request.Synopsis,
 		Comments: request.Comments,
 		Year:     request.Year,
+		Genre:    request.Genre,
 		Rate:     request.Rate,
-		//CoverPath: ,
-		Task: task,
+		Task:     task,
 	}
 }
 
@@ -49,14 +49,22 @@ func ToBook(query map[string][]string) (model.Book, error) {
 	if len(query["author"]) > 0 {
 		author = query["author"][0]
 	}
+	var progress int
+	if len(query["progress"]) > 0 {
+		progress, err = strconv.Atoi(query["progress"][0])
+		if err != nil {
+			slog.Error(err.Error())
+			return model.Book{}, err
+		}
+	}
 	var year string
 	if len(query["year"]) > 0 {
 		year = query["year"][0]
 	}
-	/*var genre string
+	var genre string
 	if len(query["genre"]) > 0 {
 		genre = query["genre"][0]
-	}*/
+	}
 	var started time.Time
 	if len(query["started"]) > 0 {
 		started, err = time.Parse(time.DateOnly, query["started"][0])
@@ -73,6 +81,22 @@ func ToBook(query map[string][]string) (model.Book, error) {
 			return model.Book{}, err
 		}
 	}
+	var synopsis string
+	if len(query["synopsis"]) > 0 {
+		synopsis = query["synopsis"][0]
+	}
+	var comments string
+	if len(query["comments"]) > 0 {
+		comments = query["comments"][0]
+	}
+	var rate int
+	if len(query["rate"]) > 0 {
+		rate, err = strconv.Atoi(query["rate"][0])
+		if err != nil {
+			slog.Error(err.Error())
+			return model.Book{}, err
+		}
+	}
 	task := model.Task{
 		Name:    name,
 		Type:    "book",
@@ -80,14 +104,14 @@ func ToBook(query map[string][]string) (model.Book, error) {
 		Ended:   ended,
 	}
 	return model.Book{
-		//Progress: request.Progress,
-		Author: author,
-		//Synopsis: request.Synopsis,
-		//Comments: request.Comments,
-		Year: year,
-		//Rate:     request.Rate,
-		//CoverPath: ,
-		Task: task,
+		Progress: progress,
+		Author:   author,
+		Synopsis: synopsis,
+		Comments: comments,
+		Year:     year,
+		Rate:     rate,
+		Genre:    genre,
+		Task:     task,
 	}, nil
 }
 

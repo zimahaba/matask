@@ -38,6 +38,7 @@ CREATE TABLE book (
     synopsis   TEXT,
     comments   TEXT,
     year       TEXT,
+    genre      TEXT,
     rate       INTEGER,
     cover_path TEXT,
     task_fk    SERIAL  NOT NULL
@@ -51,6 +52,7 @@ CREATE TABLE movie (
     rate        INTEGER,
     actors      JSONB,
     director    TEXT,
+    genre       TEXT,
     poster_path TEXT,
     task_fk     SERIAL   NOT NULL
 );

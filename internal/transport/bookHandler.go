@@ -65,30 +65,10 @@ func GetBookCoverHandler(db *sql.DB) http.HandlerFunc {
 
 func CreateBookHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		/*var b request.BookRequest
-		err := json.NewDecoder(r.Body).Decode(&b)
-		if err != nil {
-			slog.Error(err.Error())
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		userId := r.Context().Value(handler.UserIdKey).(int)
-		bookId, err := service.SaveOrUpdateBook(b.ToBook(), userId, db)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		json.NewEncoder(w).Encode(resource.IdResource{Id: bookId})*/
-
 		r.ParseMultipartForm(2 << 20)
 		var filebytes []byte
 		file, _, err := r.FormFile("cover")
 		if err == nil {
-			/*errStr := fmt.Sprintf("Error in reading the file %s\n", err)
-			slog.Error(errStr)
-			http.Error(w, errStr, http.StatusInternalServerError)
-			return*/
 			defer file.Close()
 			filebytes, err = io.ReadAll(file)
 			if err != nil {

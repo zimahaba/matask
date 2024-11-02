@@ -7,6 +7,7 @@ type Book struct {
 	Synopsis  string
 	Comments  string
 	Year      string
+	Genre     string
 	Rate      int
 	CoverPath string
 	Task      Task

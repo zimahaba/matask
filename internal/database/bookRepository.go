@@ -35,10 +35,10 @@ const (
 	`
 	findBookTaskIdSql    = "SELECT t.id FROM book b INNER JOIN task t ON t.id = b.task_fk WHERE b.id = $1 AND t.user_fk = $2"
 	findBookCoverPathSql = "SELECT b.cover_path FROM book b INNER JOIN task t ON t.id = b.task_fk WHERE b.id = $1 AND t.user_fk = $2"
-	insertBookSql        = "INSERT INTO book (progress, author, synopsis, comments, year, rate, cover_path, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id"
+	insertBookSql        = "INSERT INTO book (progress, author, synopsis, comments, year, genre, rate, cover_path, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id"
 	updateBookSql        = `
 		UPDATE book b
-		SET progress = $3, author = $4, synopsis = $5, comments = $6, year = $7, rate = $8
+		SET progress = $3, author = $4, synopsis = $5, comments = $6, year = $7, genre = $8, rate = $9
 		FROM task t 
 		WHERE t.id = b.task_fk AND b.id = $1 AND t.user_fk = $2
 		`
@@ -205,6 +205,10 @@ func SaveOrUpdateBook(b model.Book, filebytes []byte, userId int, db *sql.DB) (i
 	if b.Year != "" {
 		year = sql.NullString{String: b.Year, Valid: true}
 	}
+	var genre sql.NullString
+	if b.Genre != "" {
+		genre = sql.NullString{String: b.Genre, Valid: true}
+	}
 	var rate sql.NullInt32
 	if b.Rate != 0 {
 		rate = sql.NullInt32{Int32: int32(b.Rate), Valid: true}
@@ -212,22 +216,27 @@ func SaveOrUpdateBook(b model.Book, filebytes []byte, userId int, db *sql.DB) (i
 
 	if b.Id == 0 {
 		var coverPath sql.NullString
+		basePath := os.Getenv("COVER_PATH")
+		// check if user dir exists, if not create dir
 		if len(filebytes) > 0 {
-			fullPath := os.Getenv("COVER_PATH") + strings.ReplaceAll(b.Task.Name, " ", "_")
+			fullPath := basePath + strings.ReplaceAll(b.Task.Name, " ", "_")
 			coverPath = sql.NullString{String: fullPath, Valid: true}
 		}
-		err = tx.QueryRow(insertBookSql, b.Progress, author, synopsis, comments, year, rate, coverPath, taskId).Scan(&id)
+		err = tx.QueryRow(insertBookSql, b.Progress, author, synopsis, comments, year, genre, rate, coverPath, taskId).Scan(&id)
 		if err != nil {
 			slog.Error(err.Error())
 			return -1, err
 		}
 
-		err = os.WriteFile(coverPath.String, filebytes, 0666)
-		if err != nil {
-			return -1, err
+		if len(filebytes) > 0 {
+			err = os.WriteFile(coverPath.String, filebytes, 0666)
+			if err != nil {
+				slog.Error(err.Error())
+				return -1, err
+			}
 		}
 	} else {
-		_, err = tx.Exec(updateBookSql, b.Id, userId, b.Progress, author, synopsis, comments, year, rate)
+		_, err = tx.Exec(updateBookSql, b.Id, userId, b.Progress, author, synopsis, comments, year, genre, rate)
 		if err != nil {
 			slog.Error(err.Error())
 			return -1, err
