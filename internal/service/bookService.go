@@ -19,8 +19,8 @@ func FindBookCoverPath(id int, userId int, db *sql.DB) (string, error) {
 	return database.FindBookCoverPath(id, userId, db)
 }
 
-func SaveOrUpdateBook(p model.Book, userId int, db *sql.DB) (int, error) {
-	return database.SaveOrUpdateBook(p, userId, db)
+func SaveOrUpdateBook(p model.Book, filebytes []byte, userId int, db *sql.DB) (int, error) {
+	return database.SaveOrUpdateBook(p, filebytes, userId, db)
 }
 
 func UpdateBookCover(id int, filebytes []byte, userId int, db *sql.DB) error {

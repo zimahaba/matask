@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"matask/internal/model"
+	"os"
+	"strings"
 
 	"github.com/lib/pq"
 )
@@ -33,7 +35,7 @@ const (
 	`
 	findBookTaskIdSql    = "SELECT t.id FROM book b INNER JOIN task t ON t.id = b.task_fk WHERE b.id = $1 AND t.user_fk = $2"
 	findBookCoverPathSql = "SELECT b.cover_path FROM book b INNER JOIN task t ON t.id = b.task_fk WHERE b.id = $1 AND t.user_fk = $2"
-	insertBookSql        = "INSERT INTO book (progress, author, synopsis, comments, year, rate, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
+	insertBookSql        = "INSERT INTO book (progress, author, synopsis, comments, year, rate, cover_path, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id"
 	updateBookSql        = `
 		UPDATE book b
 		SET progress = $3, author = $4, synopsis = $5, comments = $6, year = $7, rate = $8
@@ -163,7 +165,7 @@ func FindBookCoverPath(id int, userId int, db *sql.DB) (string, error) {
 	return coverPath, nil
 }
 
-func SaveOrUpdateBook(b model.Book, userId int, db *sql.DB) (int, error) {
+func SaveOrUpdateBook(b model.Book, filebytes []byte, userId int, db *sql.DB) (int, error) {
 	tx, err := db.Begin()
 	if err != nil {
 		slog.Error(err.Error())
@@ -209,15 +211,28 @@ func SaveOrUpdateBook(b model.Book, userId int, db *sql.DB) (int, error) {
 	}
 
 	if b.Id == 0 {
-		err = tx.QueryRow(insertBookSql, b.Progress, author, synopsis, comments, year, rate, taskId).Scan(&id)
+		var coverPath sql.NullString
+		if len(filebytes) > 0 {
+			fullPath := os.Getenv("COVER_PATH") + strings.ReplaceAll(b.Task.Name, " ", "_")
+			coverPath = sql.NullString{String: fullPath, Valid: true}
+		}
+		err = tx.QueryRow(insertBookSql, b.Progress, author, synopsis, comments, year, rate, coverPath, taskId).Scan(&id)
+		if err != nil {
+			slog.Error(err.Error())
+			return -1, err
+		}
+
+		err = os.WriteFile(coverPath.String, filebytes, 0666)
+		if err != nil {
+			return -1, err
+		}
 	} else {
 		_, err = tx.Exec(updateBookSql, b.Id, userId, b.Progress, author, synopsis, comments, year, rate)
+		if err != nil {
+			slog.Error(err.Error())
+			return -1, err
+		}
 		id = b.Id
-	}
-
-	if err != nil {
-		slog.Error(err.Error())
-		return -1, err
 	}
 
 	if err = tx.Commit(); err != nil {

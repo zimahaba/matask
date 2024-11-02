@@ -1,9 +1,10 @@
 package request
 
 import (
-	"fmt"
+	"log/slog"
 	"matask/internal/model"
 	"strconv"
+	"time"
 )
 
 type BookRequest struct {
@@ -38,8 +39,59 @@ func (request BookRequest) ToBook() model.Book {
 	}
 }
 
+func ToBook(query map[string][]string) (model.Book, error) {
+	var err error
+	var name string
+	if len(query["name"]) > 0 {
+		name = query["name"][0]
+	}
+	var author string
+	if len(query["author"]) > 0 {
+		author = query["author"][0]
+	}
+	var year string
+	if len(query["year"]) > 0 {
+		year = query["year"][0]
+	}
+	/*var genre string
+	if len(query["genre"]) > 0 {
+		genre = query["genre"][0]
+	}*/
+	var started time.Time
+	if len(query["started"]) > 0 {
+		started, err = time.Parse(time.DateOnly, query["started"][0])
+		if err != nil {
+			slog.Error(err.Error())
+			return model.Book{}, err
+		}
+	}
+	var ended time.Time
+	if len(query["ended"]) > 0 {
+		ended, err = time.Parse(time.DateOnly, query["ended"][0])
+		if err != nil {
+			slog.Error(err.Error())
+			return model.Book{}, err
+		}
+	}
+	task := model.Task{
+		Name:    name,
+		Type:    "book",
+		Started: started,
+		Ended:   ended,
+	}
+	return model.Book{
+		//Progress: request.Progress,
+		Author: author,
+		//Synopsis: request.Synopsis,
+		//Comments: request.Comments,
+		Year: year,
+		//Rate:     request.Rate,
+		//CoverPath: ,
+		Task: task,
+	}, nil
+}
+
 func ToBookFilter(query map[string][]string) model.BookFilter {
-	fmt.Printf("map: %v.\n", query)
 	var filter model.BookFilter
 	if len(query["name"]) > 0 {
 		filter.Name = query["name"][0]
