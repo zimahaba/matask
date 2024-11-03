@@ -53,33 +53,32 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("POST /signup", transport.SignupHandler(db))
-	mux.HandleFunc("POST /login", transport.LoginHandler(db))
-	mux.HandleFunc("POST /logout", transport.LogoutHandler())
+	mux.HandleFunc("POST /signup", insecured(handler.MataskHandler{DB: db, F: transport.SignupHandler}))
+	mux.HandleFunc("POST /login", insecured(handler.MataskHandler{DB: db, F: transport.LoginHandler}))
+	mux.HandleFunc("POST /logout", transport.LogoutHandler)
+	mux.HandleFunc("GET /auth/status", secured(handler.MataskHandler{DB: db, F: transport.AuthCheckHandler}))
 
-	mux.HandleFunc("GET /auth/status", auth(transport.AuthCheckHandler(db), db))
+	mux.HandleFunc("GET /projects/{id}", secured(handler.MataskHandler{DB: db, F: transport.GetProjectHandler}))
+	mux.HandleFunc("POST /projects", secured(handler.MataskHandler{DB: db, F: transport.CreateProjectHandler}))
+	mux.HandleFunc("PUT /projects/{id}", secured(handler.MataskHandler{DB: db, F: transport.UpdateProjectHandler}))
+	mux.HandleFunc("DELETE /projects/{id}", secured(handler.MataskHandler{DB: db, F: transport.DeleteProjectHandler}))
 
-	mux.HandleFunc("GET /projects/{id}", auth(transport.GetProjectHandler(db), db))
-	mux.HandleFunc("POST /projects", auth(transport.CreateProjectHandler(db), db))
-	mux.HandleFunc("PUT /projects/{id}", auth(transport.UpdateProjectHandler(db), db))
-	mux.HandleFunc("DELETE /projects/{id}", auth(transport.DeleteProjectHandler(db), db))
+	mux.HandleFunc("GET /books/{id}", secured(handler.MataskHandler{DB: db, F: transport.GetBookHandler}))
+	mux.HandleFunc("GET /books", secured(handler.MataskHandler{DB: db, F: transport.GetFilteredBooksHandler}))
+	mux.HandleFunc("GET /books/cover/{id}", secured(handler.MataskHandler{DB: db, F: transport.GetBookCoverHandler}))
+	mux.HandleFunc("POST /books", secured(handler.MataskHandler{DB: db, F: transport.CreateBookHandler}))
+	mux.HandleFunc("PUT /books/{id}", secured(handler.MataskHandler{DB: db, F: transport.UpdateBookHandler}))
+	mux.HandleFunc("DELETE /books/{id}", secured(handler.MataskHandler{DB: db, F: transport.DeleteBookHandler}))
 
-	mux.HandleFunc("GET /books/{id}", auth(transport.GetBookHandler(db), db))
-	mux.HandleFunc("GET /books", auth(transport.GetFilteredBooksHandler(db), db))
-	mux.HandleFunc("GET /books/cover/{id}", auth(transport.GetBookCoverHandler(db), db))
-	mux.HandleFunc("POST /books", auth(transport.CreateBookHandler(db), db))
-	mux.HandleFunc("PUT /books/{id}", auth(transport.UpdateBookHandler(db), db))
-	mux.HandleFunc("DELETE /books/{id}", auth(transport.DeleteBookHandler(db), db))
+	mux.HandleFunc("GET /movies/{id}", secured(handler.MataskHandler{DB: db, F: transport.GetMovieHandler}))
+	mux.HandleFunc("POST /movies", secured(handler.MataskHandler{DB: db, F: transport.CreateMovieHandler}))
+	mux.HandleFunc("PUT /movies/{id}", secured(handler.MataskHandler{DB: db, F: transport.UpdateMovieHandler}))
+	mux.HandleFunc("DELETE /movies/{id}", secured(handler.MataskHandler{DB: db, F: transport.DeleteMovieHandler}))
 
-	mux.HandleFunc("GET /movies/{id}", auth(transport.GetMovieHandler(db), db))
-	mux.HandleFunc("POST /movies", auth(transport.CreateMovieHandler(db), db))
-	mux.HandleFunc("PUT /movies/{id}", auth(transport.UpdateMovieHandler(db), db))
-	mux.HandleFunc("DELETE /movies/{id}", auth(transport.DeleteMovieHandler(db), db))
-
-	mux.Handle("GET /tasks", auth(transport.GetTasksHandler(db), db))
+	mux.Handle("GET /tasks", secured(handler.MataskHandler{DB: db, F: transport.GetTasksHandler}))
 	//mux.Handle("GET /tasks", handler.ErrorHandler{DB: db, H: h))
 
-	mux.HandleFunc("PUT /images/{id}", auth(transport.UploadImageHandler(db), db))
+	mux.HandleFunc("PUT /images/{id}", secured(handler.MataskHandler{DB: db, F: transport.UploadImageHandler}))
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{os.Getenv("ALLOWED_ORIGINS")},
@@ -104,8 +103,14 @@ func main() {
 	}
 }
 
-func auth(h http.Handler, db *sql.DB) http.HandlerFunc {
-	return handler.Auth(h, db)
+func secured(h handler.MataskHandler) http.HandlerFunc {
+	return handler.Auth(h)
+}
+
+func insecured(h handler.MataskHandler) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h.ServeHTTP(w, r)
+	})
 }
 
 func loadEnv() {

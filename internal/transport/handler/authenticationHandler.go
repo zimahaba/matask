@@ -2,14 +2,13 @@ package handler
 
 import (
 	"context"
-	"database/sql"
 	"matask/internal/service"
 	"net/http"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func Auth(next http.Handler, db *sql.DB) http.HandlerFunc {
+func Auth(next MataskHandler) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tokenCookie, err := r.Cookie("token")
 		if err != nil {
@@ -28,7 +27,7 @@ func Auth(next http.Handler, db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		userId, err := service.FindUserId(claims.Username, db)
+		userId, err := service.FindUserId(claims.Username, next.DB)
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
