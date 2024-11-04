@@ -34,7 +34,7 @@ CREATE TABLE project (
 CREATE TABLE book (
     id         SERIAL  NOT NULL,
     progress   INTEGER NOT NULL,
-    author     TEXT,
+    author     TEXT    NOT NULL,
     synopsis   TEXT,
     comments   TEXT,
     year       TEXT,

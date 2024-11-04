@@ -27,7 +27,7 @@ var findFilteredBooksPageSql = " OFFSET $6 LIMIT $7 "
 
 const (
 	findBookSql = `
-		SELECT b.id, b.progress, b.author, b.synopsis, b.comments, b.year, b.rate, b.cover_path, t.name, t.started, t.ended 
+		SELECT b.id, b.progress, b.author, b.synopsis, b.comments, b.year, b.rate, b.genre, b.cover_path, t.name, t.started, t.ended
 		FROM book b
 		INNER JOIN task t ON t.id = b.task_fk
 		WHERE b.id = $1 
@@ -117,20 +117,17 @@ func FindFilteredBooks(f model.BookFilter, db *sql.DB) (model.BookPageResult, er
 
 func FindBook(id int, userId int, db *sql.DB) (model.Book, error) {
 	var b model.Book
-	var author sql.NullString
 	var synopsis sql.NullString
 	var comments sql.NullString
 	var year sql.NullString
 	var rate sql.NullInt32
+	var genre sql.NullString
 	var coverPath sql.NullString
 	var started pq.NullTime
 	var ended pq.NullTime
-	if err := db.QueryRow(findBookSql, id, userId).Scan(&b.Id, &b.Progress, &author, &synopsis, &comments, &year, &rate, &coverPath, &b.Task.Name, &started, &ended); err != nil {
+	if err := db.QueryRow(findBookSql, id, userId).Scan(&b.Id, &b.Progress, &b.Author, &synopsis, &comments, &year, &rate, &genre, &coverPath, &b.Task.Name, &started, &ended); err != nil {
 		slog.Error(err.Error())
 		return model.Book{}, err
-	}
-	if author.Valid {
-		b.Author = author.String
 	}
 	if synopsis.Valid {
 		b.Synopsis = synopsis.String
@@ -143,6 +140,9 @@ func FindBook(id int, userId int, db *sql.DB) (model.Book, error) {
 	}
 	if rate.Valid {
 		b.Rate = int(rate.Int32)
+	}
+	if genre.Valid {
+		b.Genre = genre.String
 	}
 	if coverPath.Valid {
 		b.CoverPath = coverPath.String

@@ -7,14 +7,15 @@ import (
 type BookResource struct {
 	Id       int    `json:"id"`
 	Name     string `json:"name"`
-	Started  Date   `json:"started,omitempty"`
-	Ended    Date   `json:"ended,omitempty"`
+	Started  Date   `json:"started"`
+	Ended    Date   `json:"ended"`
 	Progress int    `json:"progress"`
 	Author   string `json:"author"`
-	Synopsis string `json:"synopsis,omitempty"`
-	Comments string `json:"comments,omitempty"`
-	Year     string `json:"year,omitempty"`
-	Rate     int    `json:"rate,omitempty"`
+	Synopsis string `json:"synopsis"`
+	Comments string `json:"comments"`
+	Year     string `json:"year"`
+	Rate     int    `json:"rate"`
+	Genre    string `json:"genre"`
 }
 
 func FromBook(b model.Book) BookResource {
@@ -29,6 +30,7 @@ func FromBook(b model.Book) BookResource {
 		Comments: b.Comments,
 		Year:     b.Year,
 		Rate:     b.Rate,
+		Genre:    b.Genre,
 	}
 }
 

@@ -57,7 +57,7 @@ func GetBookCoverHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	w.Write(fileBytes)
 }
 
-func CreateBookHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func SaveBookHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	r.ParseMultipartForm(2 << 20)
 	var filebytes []byte
 	file, _, err := r.FormFile("cover")
@@ -71,8 +71,14 @@ func CreateBookHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			return
 		}
 	}
-
+	fmt.Printf("form: %v.\n", r.Form)
 	b, err := request.ToBook(r.Form)
+	id, _ := strconv.Atoi(r.PathValue("id"))
+	fmt.Printf("id: %v.\n", id)
+	if id > 0 {
+		b.Id = id
+	}
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
@@ -84,26 +90,6 @@ func CreateBookHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		return
 	}
 	json.NewEncoder(w).Encode(resource.IdResource{Id: bookId})
-}
-
-func UpdateBookHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	id, _ := strconv.Atoi(r.PathValue("id"))
-	var b request.BookRequest
-	err := json.NewDecoder(r.Body).Decode(&b)
-	if err != nil {
-		slog.Error(err.Error())
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	book := b.ToBook()
-	book.Id = id
-	userId := r.Context().Value(handler.UserIdKey).(int)
-	_, err = service.SaveOrUpdateBook(book, []byte{}, userId, db)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	fmt.Fprintf(w, "")
 }
 
 func DeleteBookHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {

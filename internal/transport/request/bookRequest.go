@@ -67,18 +67,24 @@ func ToBook(query map[string][]string) (model.Book, error) {
 	}
 	var started time.Time
 	if len(query["started"]) > 0 {
-		started, err = time.Parse(time.DateOnly, query["started"][0])
-		if err != nil {
-			slog.Error(err.Error())
-			return model.Book{}, err
+		startedValue := query["started"][0]
+		if startedValue != "" {
+			started, err = time.Parse(time.DateOnly, startedValue)
+			if err != nil {
+				slog.Error(err.Error())
+				return model.Book{}, err
+			}
 		}
 	}
 	var ended time.Time
 	if len(query["ended"]) > 0 {
-		ended, err = time.Parse(time.DateOnly, query["ended"][0])
-		if err != nil {
-			slog.Error(err.Error())
-			return model.Book{}, err
+		endedValue := query["ended"][0]
+		if endedValue != "" {
+			ended, err = time.Parse(time.DateOnly, endedValue)
+			if err != nil {
+				slog.Error(err.Error())
+				return model.Book{}, err
+			}
 		}
 	}
 	var synopsis string

@@ -66,8 +66,8 @@ func main() {
 	mux.HandleFunc("GET /books/{id}", secured(handler.MataskHandler{DB: db, F: transport.GetBookHandler}))
 	mux.HandleFunc("GET /books", secured(handler.MataskHandler{DB: db, F: transport.GetFilteredBooksHandler}))
 	mux.HandleFunc("GET /books/cover/{id}", secured(handler.MataskHandler{DB: db, F: transport.GetBookCoverHandler}))
-	mux.HandleFunc("POST /books", secured(handler.MataskHandler{DB: db, F: transport.CreateBookHandler}))
-	mux.HandleFunc("PUT /books/{id}", secured(handler.MataskHandler{DB: db, F: transport.UpdateBookHandler}))
+	mux.HandleFunc("POST /books", secured(handler.MataskHandler{DB: db, F: transport.SaveBookHandler}))
+	mux.HandleFunc("PUT /books/{id}", secured(handler.MataskHandler{DB: db, F: transport.SaveBookHandler}))
 	mux.HandleFunc("DELETE /books/{id}", secured(handler.MataskHandler{DB: db, F: transport.DeleteBookHandler}))
 
 	mux.HandleFunc("GET /movies/{id}", secured(handler.MataskHandler{DB: db, F: transport.GetMovieHandler}))
@@ -82,7 +82,7 @@ func main() {
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{os.Getenv("ALLOWED_ORIGINS")},
-		AllowedMethods:   []string{"GET", "POST", "PUT"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
 		AllowedHeaders:   []string{"Authorization", "Content-type"},
 		AllowCredentials: true,
 	})
