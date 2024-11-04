@@ -71,17 +71,18 @@ func SaveBookHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			return
 		}
 	}
-	fmt.Printf("form: %v.\n", r.Form)
+
 	b, err := request.ToBook(r.Form)
+	if err != nil {
+		slog.Error(err.Error())
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
 	id, _ := strconv.Atoi(r.PathValue("id"))
-	fmt.Printf("id: %v.\n", id)
 	if id > 0 {
 		b.Id = id
 	}
 
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	}
 	userId := r.Context().Value(handler.UserIdKey).(int)
 
 	bookId, err := service.SaveOrUpdateBook(b, filebytes, userId, db)

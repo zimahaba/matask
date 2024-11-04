@@ -214,34 +214,30 @@ func SaveOrUpdateBook(b model.Book, filebytes []byte, userId int, db *sql.DB) (i
 		rate = sql.NullInt32{Int32: int32(b.Rate), Valid: true}
 	}
 
+	var coverPath sql.NullString
+	basePath := os.Getenv("COVER_PATH")
+	if len(filebytes) > 0 {
+		fullPath := basePath + strings.ReplaceAll(b.Task.Name, " ", "_")
+		coverPath = sql.NullString{String: fullPath, Valid: true}
+	}
 	if b.Id == 0 {
-		var coverPath sql.NullString
-		basePath := os.Getenv("COVER_PATH")
-		// check if user dir exists, if not create dir
-		if len(filebytes) > 0 {
-			fullPath := basePath + strings.ReplaceAll(b.Task.Name, " ", "_")
-			coverPath = sql.NullString{String: fullPath, Valid: true}
-		}
 		err = tx.QueryRow(insertBookSql, b.Progress, author, synopsis, comments, year, genre, rate, coverPath, taskId).Scan(&id)
-		if err != nil {
-			slog.Error(err.Error())
-			return -1, err
-		}
-
-		if len(filebytes) > 0 {
-			err = os.WriteFile(coverPath.String, filebytes, 0666)
-			if err != nil {
-				slog.Error(err.Error())
-				return -1, err
-			}
-		}
 	} else {
 		_, err = tx.Exec(updateBookSql, b.Id, userId, b.Progress, author, synopsis, comments, year, genre, rate)
+		id = b.Id
+	}
+	if err != nil {
+		slog.Error(err.Error())
+		return -1, err
+	}
+
+	// check if user dir exists, if not create dir
+	if len(filebytes) > 0 {
+		err = os.WriteFile(coverPath.String, filebytes, 0666)
 		if err != nil {
 			slog.Error(err.Error())
 			return -1, err
 		}
-		id = b.Id
 	}
 
 	if err = tx.Commit(); err != nil {

@@ -42,8 +42,10 @@ const (
 )
 
 var sortFieldMap = map[string]string{
-	"id":   "id",
-	"name": "name",
+	"id":       "b.id",
+	"name":     "t.name",
+	"author":   "b.author",
+	"progress": "b.progress",
 }
 
 var sortDirectionMap = map[string]string{
