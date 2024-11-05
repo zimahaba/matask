@@ -14,6 +14,7 @@ type Movie struct {
 	Rate       int
 	Actors     Actors
 	Director   string
+	Genre      string
 	PosterPath string
 	Task       Task
 }
@@ -38,4 +39,32 @@ func (a *Actors) Scan(value interface{}) error {
 		return errors.New("type assertion to []byte failed")
 	}
 	return json.Unmarshal(v, &a)
+}
+
+type MovieFilter struct {
+	Name          string
+	Director      string
+	Actor         string
+	Year          string
+	Page          int
+	Size          int
+	SortField     string
+	SortDirection string
+	UserId        int
+}
+
+type MoviePageResult struct {
+	Movies        []MovieProjection
+	Page          int
+	Size          int
+	TotalPages    int
+	TotalElements int
+}
+
+type MovieProjection struct {
+	Id       int
+	Name     string
+	Director string
+	Actors   []string
+	Year     string
 }

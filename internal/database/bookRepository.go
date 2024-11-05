@@ -47,7 +47,7 @@ const (
 )
 
 func FindFilteredBooks(f model.BookFilter, db *sql.DB) (model.BookPageResult, error) {
-	sortField := sortFieldMap[f.SortField]
+	sortField := bookSortFieldMap[f.SortField]
 	if sortField == "" {
 		sortField = "id"
 	}

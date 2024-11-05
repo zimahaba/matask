@@ -13,6 +13,17 @@ import (
 	"strconv"
 )
 
+func GetFilteredMoviesHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	filter := request.ToMovieFilter(r.URL.Query())
+	filter.UserId = r.Context().Value(handler.UserIdKey).(int)
+	result, err := service.FindFilteredMovies(filter, db)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(resource.FromMoviePageResult(result))
+}
+
 func GetMovieHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	id, _ := strconv.Atoi(r.PathValue("id"))
 	userId := r.Context().Value(handler.UserIdKey).(int)

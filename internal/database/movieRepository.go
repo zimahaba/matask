@@ -2,11 +2,25 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 	"log/slog"
 	"matask/internal/model"
 
 	"github.com/lib/pq"
 )
+
+var findFilteredMoviesSelectSql = "SELECT m.id, t.name, m.director, m.year" // TODO: add actors
+var findFilteredMoviesSelectCountSql = "SELECT COUNT(m.id)"
+var findFilteredMoviesFromWhereSql = `
+		FROM movie m
+		INNER JOIN task t ON t.id = m.task_fk
+		WHERE ($1 = '' OR UPPER(t.name) like '%' || UPPER($1) || '%')
+		AND ($2 = '' OR UPPER(m.director) like '%' || UPPER($2) || '%' )
+		AND ($3 = '' OR UPPER(m.year) like '%' || UPPER($3) || '%' )
+		AND t.user_fk = $4
+	`
+var findFilteredMoviesOrderSql = " ORDER BY %s %s "
+var findFilteredMoviesPageSql = " OFFSET $5 LIMIT $6 "
 
 const (
 	findMovieSql = `
@@ -27,6 +41,79 @@ const (
 	updateMoviePosterSql = "UPDATE movie SET poster_path = $3 FROM task t WHERE WHERE t.id = m.task_fk AND m.id = $1 AND t.user_fk = $2"
 	deleteMovieSql       = "DELETE FROM movie m USING task t WHERE t.id = m.task_fk AND m.id = $1 AND t.user_fk = $2"
 )
+
+var movieSortFieldMap = map[string]string{
+	"id":       "m.id",
+	"name":     "t.name",
+	"directos": "m.director",
+	"year":     "m.year",
+}
+
+func FindFilteredMovies(f model.MovieFilter, db *sql.DB) (model.MoviePageResult, error) {
+	sortField := movieSortFieldMap[f.SortField]
+	if sortField == "" {
+		sortField = "id"
+	}
+	sortDirection := sortDirectionMap[f.SortDirection]
+	if sortDirection == "" {
+		sortDirection = "ASC"
+	}
+	query := findFilteredMoviesSelectSql + findFilteredMoviesFromWhereSql + fmt.Sprintf(findFilteredMoviesOrderSql, sortField, sortDirection) + findFilteredMoviesPageSql
+	countQuery := findFilteredMoviesSelectCountSql + findFilteredMoviesFromWhereSql
+
+	var count int
+	if err := db.QueryRow(countQuery, f.Name, f.Director, f.Year, f.UserId).Scan(&count); err != nil { // TODO: add actors
+		slog.Error(err.Error())
+		return model.MoviePageResult{}, err
+	}
+
+	var offset int
+	if f.Page <= 1 {
+		offset = 0
+	} else {
+		offset = (f.Page - 1) * f.Size
+	}
+
+	rows, err := db.Query(query, f.Name, f.Director, f.Year, f.UserId, offset, f.Size) // TODO: add actors
+	if err != nil {
+		slog.Error(err.Error())
+		return model.MoviePageResult{}, err
+	}
+	defer rows.Close()
+
+	var movies []model.MovieProjection
+
+	for rows.Next() {
+		var movieProjection model.MovieProjection
+		var director sql.NullString
+		var year sql.NullString
+		// TODO: add actors
+		if err := rows.Scan(&movieProjection.Id, &movieProjection.Name, &director, &year); err != nil {
+			slog.Error(err.Error())
+			return model.MoviePageResult{}, err
+		}
+		if director.Valid {
+			movieProjection.Director = director.String
+		}
+		if year.Valid {
+			movieProjection.Year = year.String
+		}
+		movies = append(movies, movieProjection)
+	}
+	if err = rows.Err(); err != nil {
+		slog.Error(err.Error())
+		return model.MoviePageResult{}, err
+	}
+
+	totalPages := count / f.Size
+	remainder := count % f.Size
+	if totalPages == 0 || (totalPages > 0 && remainder > 0) {
+		totalPages++
+	}
+
+	pageResult := model.MoviePageResult{Movies: movies, Page: f.Page, Size: f.Size, TotalPages: totalPages, TotalElements: count}
+	return pageResult, nil
+}
 
 func FindMovie(id int, userId int, db *sql.DB) (model.Movie, error) {
 	var m model.Movie

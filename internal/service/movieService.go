@@ -7,6 +7,10 @@ import (
 	"os"
 )
 
+func FindFilteredMovies(f model.MovieFilter, db *sql.DB) (model.MoviePageResult, error) {
+	return database.FindFilteredMovies(f, db)
+}
+
 func FindMovie(id int, userId int, db *sql.DB) (model.Movie, error) {
 	return database.FindMovie(id, userId, db)
 }
