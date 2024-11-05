@@ -65,6 +65,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
 		Value:    token,
+		Path:     "/",
 		Expires:  time.Now().Add(60 * time.Minute),
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,

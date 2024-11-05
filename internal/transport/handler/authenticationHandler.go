@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"log/slog"
 	"matask/internal/service"
 	"net/http"
 
@@ -12,6 +13,7 @@ func Auth(next MataskHandler) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tokenCookie, err := r.Cookie("token")
 		if err != nil {
+			slog.Error(err.Error())
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
@@ -23,12 +25,14 @@ func Auth(next MataskHandler) http.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
+			slog.Error(err.Error())
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
 		userId, err := service.FindUserId(claims.Username, next.DB)
 		if err != nil {
+			slog.Error(err.Error())
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}

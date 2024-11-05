@@ -54,9 +54,9 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("POST /signup", insecured(handler.MataskHandler{DB: db, F: transport.SignupHandler}))
-	mux.HandleFunc("POST /login", insecured(handler.MataskHandler{DB: db, F: transport.LoginHandler}))
-	mux.HandleFunc("POST /logout", transport.LogoutHandler)
-	mux.HandleFunc("GET /auth/status", secured(handler.MataskHandler{DB: db, F: transport.AuthCheckHandler}))
+	mux.HandleFunc("POST /auth/login", insecured(handler.MataskHandler{DB: db, F: transport.LoginHandler}))
+	mux.HandleFunc("POST /auth/logout", transport.LogoutHandler)
+	mux.HandleFunc("GET /auth/userinfo", secured(handler.MataskHandler{DB: db, F: transport.AuthCheckHandler}))
 
 	mux.HandleFunc("GET /projects/{id}", secured(handler.MataskHandler{DB: db, F: transport.GetProjectHandler}))
 	mux.HandleFunc("POST /projects", secured(handler.MataskHandler{DB: db, F: transport.CreateProjectHandler}))
