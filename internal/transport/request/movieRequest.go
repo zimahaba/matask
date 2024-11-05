@@ -1,8 +1,10 @@
 package request
 
 import (
+	"log/slog"
 	"matask/internal/model"
 	"strconv"
+	"time"
 )
 
 type MovieRequest struct {
@@ -33,6 +35,83 @@ func (request MovieRequest) ToMovie() model.Movie {
 		Actors:   model.Actors{Actors: request.Actors},
 		Task:     task,
 	}
+}
+
+func ToMovie(query map[string][]string) (model.Movie, error) {
+	var err error
+	var name string
+	if len(query["name"]) > 0 {
+		name = query["name"][0]
+	}
+	var director string
+	if len(query["director"]) > 0 {
+		director = query["director"][0]
+	}
+	var year string
+	if len(query["year"]) > 0 {
+		year = query["year"][0]
+	}
+	var genre string
+	if len(query["genre"]) > 0 {
+		genre = query["genre"][0]
+	}
+	/*var actors []string
+	if len(query["actors"]) > 0 {
+
+	}*/
+	var started time.Time
+	if len(query["started"]) > 0 {
+		startedValue := query["started"][0]
+		if startedValue != "" {
+			started, err = time.Parse(time.DateOnly, startedValue)
+			if err != nil {
+				slog.Error(err.Error())
+				return model.Movie{}, err
+			}
+		}
+	}
+	var ended time.Time
+	if len(query["ended"]) > 0 {
+		endedValue := query["ended"][0]
+		if endedValue != "" {
+			ended, err = time.Parse(time.DateOnly, endedValue)
+			if err != nil {
+				slog.Error(err.Error())
+				return model.Movie{}, err
+			}
+		}
+	}
+	var synopsis string
+	if len(query["synopsis"]) > 0 {
+		synopsis = query["synopsis"][0]
+	}
+	var comments string
+	if len(query["comments"]) > 0 {
+		comments = query["comments"][0]
+	}
+	var rate int
+	if len(query["rate"]) > 0 {
+		rate, err = strconv.Atoi(query["rate"][0])
+		if err != nil {
+			slog.Error(err.Error())
+			return model.Movie{}, err
+		}
+	}
+	task := model.Task{
+		Name:    name,
+		Type:    "movie",
+		Started: started,
+		Ended:   ended,
+	}
+	return model.Movie{
+		Director: director,
+		Synopsis: synopsis,
+		Comments: comments,
+		Year:     year,
+		Rate:     rate,
+		Genre:    genre,
+		Task:     task,
+	}, nil
 }
 
 func ToMovieFilter(query map[string][]string) model.MovieFilter {

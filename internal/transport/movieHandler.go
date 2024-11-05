@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"matask/internal/service"
 	"matask/internal/transport/handler"
@@ -35,42 +36,40 @@ func GetMovieHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	json.NewEncoder(w).Encode(resource.FromMovie(m))
 }
 
-func CreateMovieHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	var m request.MovieRequest
-	err := json.NewDecoder(r.Body).Decode(&m)
+func SaveMovieHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	r.ParseMultipartForm(2 << 20)
+	var filebytes []byte
+	file, _, err := r.FormFile("poster")
+	if err == nil {
+		defer file.Close()
+		filebytes, err = io.ReadAll(file)
+		if err != nil {
+			errStr := fmt.Sprintf("Error in reading the file buffer %s\n", err)
+			slog.Error(errStr)
+			http.Error(w, errStr, http.StatusInternalServerError)
+			return
+		}
+	}
+
+	m, err := request.ToMovie(r.Form)
 	if err != nil {
 		slog.Error(err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	}
+
+	id, _ := strconv.Atoi(r.PathValue("id"))
+	if id > 0 {
+		m.Id = id
 	}
 
 	userId := r.Context().Value(handler.UserIdKey).(int)
-	movieId, err := service.SaveOrUpdateMovie(m.ToMovie(), userId, db)
+
+	movieId, err := service.SaveOrUpdateMovie(m, filebytes, userId, db)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	json.NewEncoder(w).Encode(resource.IdResource{Id: movieId})
-}
-
-func UpdateMovieHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	id, _ := strconv.Atoi(r.PathValue("id"))
-	var m request.MovieRequest
-	err := json.NewDecoder(r.Body).Decode(&m)
-	if err != nil {
-		slog.Error(err.Error())
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	movie := m.ToMovie()
-	movie.Id = id
-	userId := r.Context().Value(handler.UserIdKey).(int)
-	_, err = service.SaveOrUpdateMovie(movie, userId, db)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	fmt.Fprintf(w, "")
 }
 
 func DeleteMovieHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {

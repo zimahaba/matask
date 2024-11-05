@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"matask/internal/model"
+	"os"
+	"strings"
 
 	"github.com/lib/pq"
 )
@@ -31,10 +33,10 @@ const (
 		AND t.user_fk = $2
 	`
 	findMovieTaskIdSql = "SELECT t.id FROM movie m INNER JOIN task t ON t.id = m.task_fk WHERE m.id = $1 AND t.user_fk = $2"
-	insertMovieSql     = "INSERT INTO movie (synopsis, comments, year, rate, director, actors, poster_path, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id"
+	insertMovieSql     = "INSERT INTO movie (synopsis, comments, year, rate, director, genre, actors, poster_path, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id"
 	updateMovieSql     = `
 		UPDATE movie m
-		SET synopsis = $3, comments = $4, year = $5, rate = $6, director = $7, actors = $8 
+		SET synopsis = $3, comments = $4, year = $5, rate = $6, director = $7, genre = $8, actors = $9 
 		FROM task t
 		WHERE t.id = m.task_fk AND m.id = $1 AND t.user_fk = $2
 		`
@@ -156,7 +158,7 @@ func FindMovie(id int, userId int, db *sql.DB) (model.Movie, error) {
 	return m, nil
 }
 
-func SaveOrUpdateMovie(m model.Movie, userId int, db *sql.DB) (int, error) {
+func SaveOrUpdateMovie(m model.Movie, filebytes []byte, userId int, db *sql.DB) (int, error) {
 	tx, err := db.Begin()
 	if err != nil {
 		slog.Error(err.Error())
@@ -200,21 +202,36 @@ func SaveOrUpdateMovie(m model.Movie, userId int, db *sql.DB) (int, error) {
 	if m.Director != "" {
 		director = sql.NullString{String: m.Director, Valid: true}
 	}
+	var genre sql.NullString
+	if m.Genre != "" {
+		genre = sql.NullString{String: m.Genre, Valid: true}
+	}
+
 	var posterPath sql.NullString
-	if m.PosterPath != "" {
-		posterPath = sql.NullString{String: m.PosterPath, Valid: true}
+	basePath := os.Getenv("POSTER_PATH")
+	if len(filebytes) > 0 {
+		fullPath := basePath + strings.ReplaceAll(m.Task.Name, " ", "_")
+		posterPath = sql.NullString{String: fullPath, Valid: true}
 	}
 
 	if m.Id == 0 {
-		err = tx.QueryRow(insertMovieSql, synopsis, comments, year, rate, director, m.Actors, posterPath, taskId).Scan(&id)
+		err = tx.QueryRow(insertMovieSql, synopsis, comments, year, rate, director, genre, m.Actors, posterPath, taskId).Scan(&id)
 	} else {
-		_, err = tx.Exec(updateMovieSql, m.Id, userId, synopsis, comments, year, rate, director, m.Actors)
+		_, err = tx.Exec(updateMovieSql, m.Id, userId, synopsis, comments, year, rate, director, genre, m.Actors)
 		id = m.Id
 	}
-
 	if err != nil {
 		slog.Error(err.Error())
 		return -1, err
+	}
+
+	// check if user dir exists, if not create dir
+	if len(filebytes) > 0 {
+		err = os.WriteFile(posterPath.String, filebytes, 0666)
+		if err != nil {
+			slog.Error(err.Error())
+			return -1, err
+		}
 	}
 
 	if err = tx.Commit(); err != nil {
