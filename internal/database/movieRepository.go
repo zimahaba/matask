@@ -26,15 +26,16 @@ var findFilteredMoviesPageSql = " OFFSET $5 LIMIT $6 "
 
 const (
 	findMovieSql = `
-		SELECT m.id, m.synopsis, m.comments, m.year, m.rate, m.director, m.actors, m.poster_path, t.name, t.started, t.ended 
+		SELECT m.id, m.synopsis, m.comments, m.year, m.rate, m.director, m.actors, m.genre, m.poster_path, t.name, t.started, t.ended 
 		FROM movie m
 		INNER JOIN task t ON t.id = m.task_fk
 		WHERE m.id = $1
 		AND t.user_fk = $2
 	`
-	findMovieTaskIdSql = "SELECT t.id FROM movie m INNER JOIN task t ON t.id = m.task_fk WHERE m.id = $1 AND t.user_fk = $2"
-	insertMovieSql     = "INSERT INTO movie (synopsis, comments, year, rate, director, genre, actors, poster_path, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id"
-	updateMovieSql     = `
+	findMovieTaskIdSql     = "SELECT t.id FROM movie m INNER JOIN task t ON t.id = m.task_fk WHERE m.id = $1 AND t.user_fk = $2"
+	findMoviePosterPathSql = "SELECT m.poster_path FROM movie m INNER JOIN task t ON t.id = m.task_fk WHERE m.id = $1 AND t.user_fk = $2"
+	insertMovieSql         = "INSERT INTO movie (synopsis, comments, year, rate, director, genre, actors, poster_path, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id"
+	updateMovieSql         = `
 		UPDATE movie m
 		SET synopsis = $3, comments = $4, year = $5, rate = $6, director = $7, genre = $8, actors = $9 
 		FROM task t
@@ -124,10 +125,11 @@ func FindMovie(id int, userId int, db *sql.DB) (model.Movie, error) {
 	var year sql.NullString
 	var rate sql.NullInt32
 	var director sql.NullString
-	var coverPath sql.NullString
+	var genre sql.NullString
+	var posterPath sql.NullString
 	var started pq.NullTime
 	var ended pq.NullTime
-	if err := db.QueryRow(findMovieSql, id, userId).Scan(&m.Id, &synopsis, &comments, &year, &rate, &director, &m.Actors, &coverPath, &m.Task.Name, &started, &ended); err != nil {
+	if err := db.QueryRow(findMovieSql, id, userId).Scan(&m.Id, &synopsis, &comments, &year, &rate, &director, &m.Actors, &genre, &posterPath, &m.Task.Name, &started, &ended); err != nil {
 		slog.Error(err.Error())
 		return model.Movie{}, err
 	}
@@ -146,8 +148,11 @@ func FindMovie(id int, userId int, db *sql.DB) (model.Movie, error) {
 	if director.Valid {
 		m.Director = director.String
 	}
-	if coverPath.Valid {
-		m.PosterPath = coverPath.String
+	if genre.Valid {
+		m.Genre = genre.String
+	}
+	if posterPath.Valid {
+		m.PosterPath = posterPath.String
 	}
 	if started.Valid {
 		m.Task.Started = started.Time
@@ -156,6 +161,15 @@ func FindMovie(id int, userId int, db *sql.DB) (model.Movie, error) {
 		m.Task.Ended = ended.Time
 	}
 	return m, nil
+}
+
+func FindMoviePosterPath(id int, userId int, db *sql.DB) (string, error) {
+	var posterPath string
+	if err := db.QueryRow(findMoviePosterPathSql, id, userId).Scan(&posterPath); err != nil {
+		slog.Error(err.Error())
+		return "", err
+	}
+	return posterPath, nil
 }
 
 func SaveOrUpdateMovie(m model.Movie, filebytes []byte, userId int, db *sql.DB) (int, error) {

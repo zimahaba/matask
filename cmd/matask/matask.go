@@ -72,6 +72,7 @@ func main() {
 
 	mux.HandleFunc("GET /movies/{id}", secured(handler.MataskHandler{DB: db, F: transport.GetMovieHandler}))
 	mux.HandleFunc("GET /movies", secured(handler.MataskHandler{DB: db, F: transport.GetFilteredMoviesHandler}))
+	mux.HandleFunc("GET /movies/poster/{id}", secured(handler.MataskHandler{DB: db, F: transport.GetMoviePosterHandler}))
 	mux.HandleFunc("POST /movies", secured(handler.MataskHandler{DB: db, F: transport.SaveMovieHandler}))
 	mux.HandleFunc("PUT /movies/{id}", secured(handler.MataskHandler{DB: db, F: transport.SaveMovieHandler}))
 	mux.HandleFunc("DELETE /movies/{id}", secured(handler.MataskHandler{DB: db, F: transport.DeleteMovieHandler}))

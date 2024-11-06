@@ -11,6 +11,7 @@ import (
 	"matask/internal/transport/request"
 	"matask/internal/transport/resource"
 	"net/http"
+	"os"
 	"strconv"
 )
 
@@ -34,6 +35,26 @@ func GetMovieHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		return
 	}
 	json.NewEncoder(w).Encode(resource.FromMovie(m))
+}
+
+func GetMoviePosterHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	id, _ := strconv.Atoi(r.PathValue("id"))
+	userId := r.Context().Value(handler.UserIdKey).(int)
+	coverPath, err := service.FindMoviePosterPath(id, userId, db)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fileBytes, err := os.ReadFile(coverPath)
+	if err != nil {
+		slog.Error(err.Error())
+		http.Error(w, "Movie poster not found.", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.WriteHeader(http.StatusOK)
+	w.Write(fileBytes)
 }
 
 func SaveMovieHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {

@@ -15,6 +15,10 @@ func FindMovie(id int, userId int, db *sql.DB) (model.Movie, error) {
 	return database.FindMovie(id, userId, db)
 }
 
+func FindMoviePosterPath(id int, userId int, db *sql.DB) (string, error) {
+	return database.FindMoviePosterPath(id, userId, db)
+}
+
 func SaveOrUpdateMovie(p model.Movie, filebytes []byte, userId int, db *sql.DB) (int, error) {
 	return database.SaveOrUpdateMovie(p, filebytes, userId, db)
 }
