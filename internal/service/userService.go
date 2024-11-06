@@ -16,12 +16,20 @@ func FindUserId(username string, db *sql.DB) (int, error) {
 	return database.FindUserId(username, db)
 }
 
+func FindUsernameByRefreshToken(refreshToken string, db *sql.DB) (string, error) {
+	return database.FindUsernameByRefreshToken(refreshToken, db)
+}
+
 func findPassword(username string, db *sql.DB) (string, error) {
 	return database.FindPassword(username, db)
 }
 
 func CreateUser(user model.MataskUser, db *sql.DB) error {
 	return database.SaveOrUpdateUser(user, db)
+}
+
+func UpsertRefreshToken(refreshToken string, username string, db *sql.DB) error {
+	return database.UpsertRefreshToken(refreshToken, username, db)
 }
 
 func VerifyCredentials(username string, password string, db *sql.DB) error {

@@ -1,6 +1,8 @@
 package service
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"os"
 	"time"
 
@@ -25,4 +27,14 @@ func GenerateToken(username string) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	return token.SignedString(JwtKey)
+}
+
+func GenerateRefreshToken() (string, error) {
+	token := make([]byte, 32)
+	_, err := rand.Read(token)
+	if err != nil {
+		return "", err
+	}
+
+	return base64.URLEncoding.EncodeToString(token), nil
 }

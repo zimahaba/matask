@@ -1,8 +1,9 @@
 
 CREATE TABLE user_credentials (
-    id       SERIAL NOT NULL,
-    username TEXT NOT NULL,
-    password TEXT NOT NULL
+    id            SERIAL NOT NULL,
+    username      TEXT NOT NULL,
+    password      TEXT NOT NULL,
+    refresh_token TEXT
 );
 
 CREATE TABLE matask_user (
@@ -57,14 +58,17 @@ CREATE TABLE movie (
     task_fk     SERIAL   NOT NULL
 );
 
-ALTER TABLE task    ADD CONSTRAINT task_pkey    PRIMARY KEY (id);
-ALTER TABLE project ADD CONSTRAINT project_pkey PRIMARY KEY (id);
-ALTER TABLE book    ADD CONSTRAINT book_pkey    PRIMARY KEY (id);
-ALTER TABLE movie   ADD CONSTRAINT movie_pkey   PRIMARY KEY (id);
+ALTER TABLE matask_user      ADD CONSTRAINT matask_user_pkey      PRIMARY KEY (id);
+ALTER TABLE user_credentials ADD CONSTRAINT user_credentials_pkey PRIMARY KEY (id);
+ALTER TABLE task             ADD CONSTRAINT task_pkey             PRIMARY KEY (id);
+ALTER TABLE project          ADD CONSTRAINT project_pkey          PRIMARY KEY (id);
+ALTER TABLE book             ADD CONSTRAINT book_pkey             PRIMARY KEY (id);
+ALTER TABLE movie            ADD CONSTRAINT movie_pkey            PRIMARY KEY (id);
 
-ALTER TABLE project ADD CONSTRAINT project_task_fkey FOREIGN KEY (task_fk) REFERENCES task (id);
-ALTER TABLE book    ADD CONSTRAINT book_task_fkey    FOREIGN KEY (task_fk) REFERENCES task (id);
-ALTER TABLE movie   ADD CONSTRAINT movie_task_fkey   FOREIGN KEY (task_fk) REFERENCES task (id);
+ALTER TABLE matask_user ADD CONSTRAINT matask_user_user_credentials_fkey FOREIGN KEY (user_credentials_fk) REFERENCES user_credentials (id);
+ALTER TABLE project     ADD CONSTRAINT project_task_fkey                 FOREIGN KEY (task_fk)             REFERENCES task (id);
+ALTER TABLE book        ADD CONSTRAINT book_task_fkey                    FOREIGN KEY (task_fk)             REFERENCES task (id);
+ALTER TABLE movie       ADD CONSTRAINT movie_task_fkey                   FOREIGN KEY (task_fk)             REFERENCES task (id);
 
 ALTER TABLE user_credentials ADD CONSTRAINT user_credentials_username_unq UNIQUE (username);
-ALTER TABLE matask_user ADD CONSTRAINT user_email_unq UNIQUE (email);
+ALTER TABLE matask_user      ADD CONSTRAINT user_email_unq                UNIQUE (email);

@@ -70,6 +70,21 @@ func LoginHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
 	})
+
+	refreshToken, err := service.GenerateRefreshToken()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	service.UpsertRefreshToken(refreshToken, creds.Username, db)
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh",
+		Value:    refreshToken,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+
 	json.NewEncoder(w).Encode(resource.UserResource{Username: creds.Username})
 }
 
@@ -81,6 +96,52 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
 	})
+}
+
+func RefreshHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	refreshCookie, err := r.Cookie("refresh")
+	if err != nil {
+		slog.Error(err.Error())
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	username, err := service.FindUsernameByRefreshToken(refreshCookie.Value, db)
+	if err != nil {
+		slog.Error(err.Error())
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	token, err := service.GenerateToken(username)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    token,
+		Path:     "/",
+		Expires:  time.Now().Add(60 * time.Minute),
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	refreshToken, err := service.GenerateRefreshToken()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	service.UpsertRefreshToken(refreshToken, username, db)
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh",
+		Value:    refreshToken,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	json.NewEncoder(w).Encode(resource.UserResource{Username: username})
 }
 
 func AuthCheckHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
