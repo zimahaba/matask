@@ -46,6 +46,13 @@ const (
 	deleteBookSql      = "DELETE FROM book b USING task t WHERE t.id = b.task_fk AND b.id = $1 AND t.user_fk = $2"
 )
 
+var bookSortFieldMap = map[string]string{
+	"id":       "b.id",
+	"name":     "t.name",
+	"author":   "b.author",
+	"progress": "b.progress",
+}
+
 func FindFilteredBooks(f model.BookFilter, db *sql.DB) (model.BookPageResult, error) {
 	sortField := bookSortFieldMap[f.SortField]
 	if sortField == "" {

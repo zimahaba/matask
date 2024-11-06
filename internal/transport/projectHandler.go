@@ -13,6 +13,17 @@ import (
 	"strconv"
 )
 
+func GetFilteredProjectsHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	filter := request.ToProjectFilter(r.URL.Query())
+	filter.UserId = r.Context().Value(handler.UserIdKey).(int)
+	result, err := service.FindFilteredProjects(filter, db)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(resource.FromProjectPageResult(result))
+}
+
 func GetProjectHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	id, _ := strconv.Atoi(r.PathValue("id"))
 	userId := r.Context().Value(handler.UserIdKey).(int)

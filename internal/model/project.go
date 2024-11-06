@@ -34,3 +34,28 @@ func (a *DynamicFields) Scan(value interface{}) error {
 
 	return json.Unmarshal(b, &a)
 }
+
+type ProjectFilter struct {
+	Name          string
+	Progress1     int
+	Progress2     int
+	Page          int
+	Size          int
+	SortField     string
+	SortDirection string
+	UserId        int
+}
+
+type ProjectPageResult struct {
+	Projects      []ProjectProjection
+	Page          int
+	Size          int
+	TotalPages    int
+	TotalElements int
+}
+
+type ProjectProjection struct {
+	Id       int
+	Name     string
+	Progress int
+}

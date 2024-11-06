@@ -48,7 +48,7 @@ const (
 var movieSortFieldMap = map[string]string{
 	"id":       "m.id",
 	"name":     "t.name",
-	"directos": "m.director",
+	"director": "m.director",
 	"year":     "m.year",
 }
 

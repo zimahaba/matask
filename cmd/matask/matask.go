@@ -58,6 +58,7 @@ func main() {
 	mux.HandleFunc("POST /auth/logout", transport.LogoutHandler)
 	mux.HandleFunc("GET /auth/userinfo", secured(handler.MataskHandler{DB: db, F: transport.AuthCheckHandler}))
 
+	mux.HandleFunc("GET /projects", secured(handler.MataskHandler{DB: db, F: transport.GetFilteredProjectsHandler}))
 	mux.HandleFunc("GET /projects/{id}", secured(handler.MataskHandler{DB: db, F: transport.GetProjectHandler}))
 	mux.HandleFunc("POST /projects", secured(handler.MataskHandler{DB: db, F: transport.CreateProjectHandler}))
 	mux.HandleFunc("PUT /projects/{id}", secured(handler.MataskHandler{DB: db, F: transport.UpdateProjectHandler}))

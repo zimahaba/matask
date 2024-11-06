@@ -6,6 +6,10 @@ import (
 	"matask/internal/model"
 )
 
+func FindFilteredProjects(f model.ProjectFilter, db *sql.DB) (model.ProjectPageResult, error) {
+	return database.FindFilteredProjects(f, db)
+}
+
 func FindProject(id int, userId int, db *sql.DB) (model.Project, error) {
 	return database.FindProject(id, userId, db)
 }

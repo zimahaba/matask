@@ -41,11 +41,9 @@ const (
 	deleteTaskSql = "DELETE FROM task WHERE id = $1 AND user_fk = $2"
 )
 
-var bookSortFieldMap = map[string]string{
-	"id":       "b.id",
-	"name":     "t.name",
-	"author":   "b.author",
-	"progress": "b.progress",
+var taskSortFieldMap = map[string]string{
+	"id":   "b.id",
+	"name": "t.name",
 }
 
 var sortDirectionMap = map[string]string{
@@ -54,7 +52,7 @@ var sortDirectionMap = map[string]string{
 }
 
 func FindTasks(f model.TaskFilter, db *sql.DB) (model.TaskPageResult, error) {
-	sortField := bookSortFieldMap[f.SortField]
+	sortField := taskSortFieldMap[f.SortField]
 	if sortField == "" {
 		sortField = "id"
 	}
