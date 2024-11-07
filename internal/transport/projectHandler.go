@@ -61,26 +61,6 @@ func SaveProjectHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	json.NewEncoder(w).Encode(resource.IdResource{Id: projectId})
 }
 
-func UpdateProjectHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	id, _ := strconv.Atoi(r.PathValue("id"))
-	var p request.ProjectRequest
-	err := json.NewDecoder(r.Body).Decode(&p)
-	if err != nil {
-		slog.Error(err.Error())
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	project := p.ToProject()
-	project.Id = id
-	userId := r.Context().Value(handler.UserIdKey).(int)
-	_, err = service.SaveProject(project, userId, db)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	fmt.Fprintf(w, "")
-}
-
 func DeleteProjectHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	id, _ := strconv.Atoi(r.PathValue("id"))
 	userId := r.Context().Value(handler.UserIdKey).(int)
