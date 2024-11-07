@@ -60,7 +60,7 @@ func main() {
 
 	mux.HandleFunc("GET /projects", secured(handler.MataskHandler{DB: db, F: transport.GetFilteredProjectsHandler}))
 	mux.HandleFunc("GET /projects/{id}", secured(handler.MataskHandler{DB: db, F: transport.GetProjectHandler}))
-	mux.HandleFunc("POST /projects", secured(handler.MataskHandler{DB: db, F: transport.CreateProjectHandler}))
+	mux.HandleFunc("POST /projects", secured(handler.MataskHandler{DB: db, F: transport.SaveProjectHandler}))
 	mux.HandleFunc("PUT /projects/{id}", secured(handler.MataskHandler{DB: db, F: transport.UpdateProjectHandler}))
 	mux.HandleFunc("DELETE /projects/{id}", secured(handler.MataskHandler{DB: db, F: transport.DeleteProjectHandler}))
 

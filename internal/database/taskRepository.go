@@ -2,38 +2,12 @@ package database
 
 import (
 	"database/sql"
-	"fmt"
 	"log/slog"
 	"matask/internal/model"
 	"time"
 
 	"github.com/lib/pq"
 )
-
-var findTasksSelectSql = `
-		SELECT t.id, t.name, t.type, t.started, t.ended,
-			CASE
-				WHEN t.type = 'project' THEN p.id
-				WHEN t.type = 'book' then b.id
-				WHEN t.type = 'movie' then m.id
-			END
-		`
-var findTasksSelectCountSql = "SELECT COUNT(t.id)"
-var findTasksFromWhereSql = `
-		FROM task t
-		LEFT OUTER JOIN project p ON p.task_fk = t.id
-		LEFT OUTER JOIN book b ON b.task_fk = t.id
-		LEFT OUTER JOIN movie m ON m.task_fk = t.id
-		WHERE ($1 = '' OR UPPER(t.name) like '%' || UPPER($1) || '%')
-		AND ($2 = '' OR t.type = $2)
-		AND (CAST($3 AS DATE) IS NULL OR t.started >= CAST($3 AS DATE))
-		AND (CAST($4 AS DATE) IS NULL OR t.started <= CAST($4 AS DATE))
-		AND (CAST($5 AS DATE) IS NULL OR (t.ended >= CAST($5 AS DATE) OR t.ended IS NULL))
-		AND (CAST($6 AS DATE) IS NULL OR (t.ended <= CAST($6 AS DATE) OR t.ended IS NULL))
-		AND t.user_fk = $7
-	`
-var findTaskOrderSql = " ORDER BY %s %s "
-var findTaskPageSql = " OFFSET $8 LIMIT $9 "
 
 const (
 	insertTaskSql = "INSERT INTO task (name, type, started, ended, created, user_fk) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id"
@@ -46,22 +20,8 @@ var taskSortFieldMap = map[string]string{
 	"name": "t.name",
 }
 
-var sortDirectionMap = map[string]string{
-	"ASC":  "ASC",
-	"DESC": "DESC",
-}
-
 func FindTasks(f model.TaskFilter, db *sql.DB) (model.TaskPageResult, error) {
-	sortField := taskSortFieldMap[f.SortField]
-	if sortField == "" {
-		sortField = "id"
-	}
-	sortDirection := sortDirectionMap[f.SortDirection]
-	if sortDirection == "" {
-		sortDirection = "ASC"
-	}
-	query := findTasksSelectSql + findTasksFromWhereSql + fmt.Sprintf(findTaskOrderSql, sortField, sortDirection) + findTaskPageSql
-	countQuery := findTasksSelectCountSql + findTasksFromWhereSql
+	query, countQuery := buildTaskFilteredQueries(f)
 
 	var count int
 	if err := db.QueryRow(countQuery, f.Name, f.Type, f.Started1, f.Started2, f.Ended1, f.Ended2, f.UserId).Scan(&count); err != nil {
@@ -69,12 +29,7 @@ func FindTasks(f model.TaskFilter, db *sql.DB) (model.TaskPageResult, error) {
 		return model.TaskPageResult{}, err
 	}
 
-	var offset int
-	if f.Page <= 1 {
-		offset = 0
-	} else {
-		offset = (f.Page - 1) * f.Size
-	}
+	offset := getOffset(f.Page, f.Size)
 
 	rows, err := db.Query(query, f.Name, f.Type, f.Started1, f.Started2, f.Ended1, f.Ended2, f.UserId, offset, f.Size)
 	if err != nil {
@@ -106,14 +61,38 @@ func FindTasks(f model.TaskFilter, db *sql.DB) (model.TaskPageResult, error) {
 		return model.TaskPageResult{}, err
 	}
 
-	totalPages := count / f.Size
-	remainder := count % f.Size
-	if totalPages == 0 || (totalPages > 0 && remainder > 0) {
-		totalPages++
-	}
+	totalPages := calculateTotalPages(count, f.Size)
 
 	pageResult := model.TaskPageResult{Tasks: tasks, Page: f.Page, Size: f.Size, TotalPages: totalPages, TotalElements: count}
 	return pageResult, nil
+}
+
+func buildTaskFilteredQueries(f model.TaskFilter) (string, string) {
+	selectQuery := `SELECT t.id, t.name, t.type, t.started, t.ended,
+					CASE
+						WHEN t.type = 'project' THEN p.id
+						WHEN t.type = 'book' then b.id
+						WHEN t.type = 'movie' then m.id
+					END`
+	selectCount := "SELECT COUNT(t.id)"
+	from := `		FROM task t
+					LEFT OUTER JOIN project p ON p.task_fk = t.id
+					LEFT OUTER JOIN book b ON b.task_fk = t.id
+					LEFT OUTER JOIN movie m ON m.task_fk = t.id
+					WHERE ($1 = '' OR UPPER(t.name) like '%' || UPPER($1) || '%')
+					AND ($2 = '' OR t.type = $2)
+					AND (CAST($3 AS DATE) IS NULL OR t.started >= CAST($3 AS DATE))
+					AND (CAST($4 AS DATE) IS NULL OR t.started <= CAST($4 AS DATE))
+					AND (CAST($5 AS DATE) IS NULL OR (t.ended >= CAST($5 AS DATE) OR t.ended IS NULL))
+					AND (CAST($6 AS DATE) IS NULL OR (t.ended <= CAST($6 AS DATE) OR t.ended IS NULL))
+					AND t.user_fk = $7`
+	order := getOrderQuery(f.SortField, f.SortDirection, taskSortFieldMap)
+	offsetLimit := "OFFSET $8 LIMIT $9 "
+
+	query := selectQuery + from + order + offsetLimit
+	countQuery := selectCount + from
+
+	return query, countQuery
 }
 
 func SaveOrUpdateTask(t model.Task, userId int, tx *sql.Tx) (int, error) {

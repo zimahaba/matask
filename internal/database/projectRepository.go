@@ -2,25 +2,11 @@ package database
 
 import (
 	"database/sql"
-	"fmt"
 	"log/slog"
 	"matask/internal/model"
 
 	"github.com/lib/pq"
 )
-
-var findFilteredProjectsSelectSql = "SELECT p.id, t.name, p.progress"
-var findFilteredProjectsSelectCountSql = "SELECT COUNT(p.id)"
-var findFilteredProjectsFromWhereSql = `
-		FROM project p
-		INNER JOIN task t ON t.id = p.task_fk
-		WHERE ($1 = '' OR UPPER(t.name) like '%' || UPPER($1) || '%')
-		AND (p.progress >= COALESCE(CAST($2 AS INTEGER), 0))
-		AND (p.progress <= COALESCE(CAST($3 AS INTEGER), 100))
-		AND t.user_fk = $4
-	`
-var findFilteredProjectsOrderSql = " ORDER BY %s %s "
-var findFilteredProjectsPageSql = " OFFSET $5 LIMIT $6 "
 
 const (
 	findProjectSql = `
@@ -48,16 +34,7 @@ var projectSortFieldMap = map[string]string{
 }
 
 func FindFilteredProjects(f model.ProjectFilter, db *sql.DB) (model.ProjectPageResult, error) {
-	sortField := projectSortFieldMap[f.SortField]
-	if sortField == "" {
-		sortField = "id"
-	}
-	sortDirection := sortDirectionMap[f.SortDirection]
-	if sortDirection == "" {
-		sortDirection = "ASC"
-	}
-	query := findFilteredProjectsSelectSql + findFilteredProjectsFromWhereSql + fmt.Sprintf(findFilteredProjectsOrderSql, sortField, sortDirection) + findFilteredProjectsPageSql
-	countQuery := findFilteredProjectsSelectCountSql + findFilteredProjectsFromWhereSql
+	query, countQuery := buildProjectFilteredQueries(f)
 
 	var count int
 	progress1 := sql.NullInt64{}
@@ -102,14 +79,28 @@ func FindFilteredProjects(f model.ProjectFilter, db *sql.DB) (model.ProjectPageR
 		return model.ProjectPageResult{}, err
 	}
 
-	totalPages := count / f.Size
-	remainder := count % f.Size
-	if totalPages == 0 || (totalPages > 0 && remainder > 0) {
-		totalPages++
-	}
+	totalPages := calculateTotalPages(count, f.Size)
 
 	pageResult := model.ProjectPageResult{Projects: projects, Page: f.Page, Size: f.Size, TotalPages: totalPages, TotalElements: count}
 	return pageResult, nil
+}
+
+func buildProjectFilteredQueries(f model.ProjectFilter) (string, string) {
+	selectQuery := "SELECT p.id, t.name, p.progress"
+	selectCount := "SELECT COUNT(p.id)"
+	from := `		FROM project p
+					INNER JOIN task t ON t.id = p.task_fk
+					WHERE ($1 = '' OR UPPER(t.name) like '%' || UPPER($1) || '%')
+					AND (p.progress >= COALESCE(CAST($2 AS INTEGER), 0))
+					AND (p.progress <= COALESCE(CAST($3 AS INTEGER), 100))
+					AND t.user_fk = $4`
+	order := getOrderQuery(f.SortField, f.SortDirection, projectSortFieldMap)
+	offsetLimit := "OFFSET $5 LIMIT $6 "
+
+	query := selectQuery + from + order + offsetLimit
+	countQuery := selectCount + from
+
+	return query, countQuery
 }
 
 func FindProject(id int, userId int, db *sql.DB) (model.Project, error) {
@@ -133,7 +124,7 @@ func FindProject(id int, userId int, db *sql.DB) (model.Project, error) {
 	return p, nil
 }
 
-func SaveOrUpdateProject(p model.Project, userId int, db *sql.DB) (int, error) {
+func SaveProject(p model.Project, userId int, db *sql.DB) (int, error) {
 	tx, err := db.Begin()
 	if err != nil {
 		slog.Error(err.Error())

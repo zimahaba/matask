@@ -35,7 +35,7 @@ func GetProjectHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	json.NewEncoder(w).Encode(resource.FromProject(p))
 }
 
-func CreateProjectHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func SaveProjectHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	var p request.ProjectRequest
 	err := json.NewDecoder(r.Body).Decode(&p)
 	if err != nil {
@@ -43,8 +43,17 @@ func CreateProjectHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	project := p.ToProject()
+
+	id, _ := strconv.Atoi(r.PathValue("id"))
+	if id > 0 {
+		project.Id = id
+	}
+
 	userId := r.Context().Value(handler.UserIdKey).(int)
-	projectId, err := service.SaveOrUpdateProject(p.ToProject(), userId, db)
+
+	projectId, err := service.SaveProject(project, userId, db)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -64,7 +73,7 @@ func UpdateProjectHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	project := p.ToProject()
 	project.Id = id
 	userId := r.Context().Value(handler.UserIdKey).(int)
-	_, err = service.SaveOrUpdateProject(project, userId, db)
+	_, err = service.SaveProject(project, userId, db)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

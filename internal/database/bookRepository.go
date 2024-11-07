@@ -2,7 +2,6 @@ package database
 
 import (
 	"database/sql"
-	"fmt"
 	"log/slog"
 	"matask/internal/model"
 	"os"
@@ -11,40 +10,8 @@ import (
 	"github.com/lib/pq"
 )
 
-var findFilteredBooksSelectSql = "SELECT b.id, t.name, b.author, b.progress"
-var findFilteredBooksSelectCountSql = "SELECT COUNT(b.id)"
-var findFilteredBooksFromWhereSql = `
-		FROM book b
-		INNER JOIN task t ON t.id = b.task_fk
-		WHERE ($1 = '' OR UPPER(t.name) like '%' || UPPER($1) || '%')
-		AND ($2 = '' OR UPPER(b.author) like '%' || UPPER($2) || '%' )
-		AND (b.progress >= COALESCE(CAST($3 AS INTEGER), 0))
-		AND (b.progress <= COALESCE(CAST($4 AS INTEGER), 100))
-		AND t.user_fk = $5
-	`
-var findFilteredBooksOrderSql = " ORDER BY %s %s "
-var findFilteredBooksPageSql = " OFFSET $6 LIMIT $7 "
-
-const (
-	findBookSql = `
-		SELECT b.id, b.progress, b.author, b.synopsis, b.comments, b.year, b.rate, b.genre, b.cover_path, t.name, t.started, t.ended
-		FROM book b
-		INNER JOIN task t ON t.id = b.task_fk
-		WHERE b.id = $1 
-		AND t.user_fk = $2
-	`
-	findBookTaskIdSql    = "SELECT t.id FROM book b INNER JOIN task t ON t.id = b.task_fk WHERE b.id = $1 AND t.user_fk = $2"
-	findBookCoverPathSql = "SELECT b.cover_path FROM book b INNER JOIN task t ON t.id = b.task_fk WHERE b.id = $1 AND t.user_fk = $2"
-	insertBookSql        = "INSERT INTO book (progress, author, synopsis, comments, year, genre, rate, cover_path, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id"
-	updateBookSql        = `
-		UPDATE book b
-		SET progress = $3, author = $4, synopsis = $5, comments = $6, year = $7, genre = $8, rate = $9
-		FROM task t 
-		WHERE t.id = b.task_fk AND b.id = $1 AND t.user_fk = $2
-		`
-	updateBookCoverSql = "UPDATE book b SET cover_path = $3 FROM task t WHERE t.id = b.task_fk AND b.id = $1 AND t.user_fk = $2"
-	deleteBookSql      = "DELETE FROM book b USING task t WHERE t.id = b.task_fk AND b.id = $1 AND t.user_fk = $2"
-)
+const findBookTaskIdSql = "SELECT t.id FROM book b INNER JOIN task t ON t.id = b.task_fk WHERE b.id = $1 AND t.user_fk = $2"
+const deleteBookSql = "DELETE FROM book b USING task t WHERE t.id = b.task_fk AND b.id = $1 AND t.user_fk = $2"
 
 var bookSortFieldMap = map[string]string{
 	"id":       "b.id",
@@ -54,16 +21,7 @@ var bookSortFieldMap = map[string]string{
 }
 
 func FindFilteredBooks(f model.BookFilter, db *sql.DB) (model.BookPageResult, error) {
-	sortField := bookSortFieldMap[f.SortField]
-	if sortField == "" {
-		sortField = "id"
-	}
-	sortDirection := sortDirectionMap[f.SortDirection]
-	if sortDirection == "" {
-		sortDirection = "ASC"
-	}
-	query := findFilteredBooksSelectSql + findFilteredBooksFromWhereSql + fmt.Sprintf(findFilteredBooksOrderSql, sortField, sortDirection) + findFilteredBooksPageSql
-	countQuery := findFilteredBooksSelectCountSql + findFilteredBooksFromWhereSql
+	query, countQuery := buildBookFilteredQueries(f)
 
 	var count int
 	progress1 := sql.NullInt64{}
@@ -79,12 +37,7 @@ func FindFilteredBooks(f model.BookFilter, db *sql.DB) (model.BookPageResult, er
 		return model.BookPageResult{}, err
 	}
 
-	var offset int
-	if f.Page <= 1 {
-		offset = 0
-	} else {
-		offset = (f.Page - 1) * f.Size
-	}
+	offset := getOffset(f.Page, f.Size)
 
 	rows, err := db.Query(query, f.Name, f.Author, progress1, progress2, f.UserId, offset, f.Size)
 	if err != nil {
@@ -112,17 +65,38 @@ func FindFilteredBooks(f model.BookFilter, db *sql.DB) (model.BookPageResult, er
 		return model.BookPageResult{}, err
 	}
 
-	totalPages := count / f.Size
-	remainder := count % f.Size
-	if totalPages == 0 || (totalPages > 0 && remainder > 0) {
-		totalPages++
-	}
+	totalPages := calculateTotalPages(count, f.Size)
 
 	pageResult := model.BookPageResult{Books: books, Page: f.Page, Size: f.Size, TotalPages: totalPages, TotalElements: count}
 	return pageResult, nil
 }
 
+func buildBookFilteredQueries(f model.BookFilter) (string, string) {
+	selectQuery := "SELECT b.id, t.name, b.author, b.progress"
+	selectCount := "SELECT COUNT(b.id)"
+	from := `		FROM book b
+					INNER JOIN task t ON t.id = b.task_fk
+					WHERE ($1 = '' OR UPPER(t.name) like '%' || UPPER($1) || '%')
+					AND ($2 = '' OR UPPER(b.author) like '%' || UPPER($2) || '%' )
+					AND (b.progress >= COALESCE(CAST($3 AS INTEGER), 0))
+					AND (b.progress <= COALESCE(CAST($4 AS INTEGER), 100))
+					AND t.user_fk = $5`
+	order := getOrderQuery(f.SortField, f.SortDirection, bookSortFieldMap)
+	offsetLimit := "OFFSET $6 LIMIT $7 "
+
+	query := selectQuery + from + order + offsetLimit
+	countQuery := selectCount + from
+
+	return query, countQuery
+}
+
 func FindBook(id int, userId int, db *sql.DB) (model.Book, error) {
+	query := `SELECT b.id, b.progress, b.author, b.synopsis, b.comments, b.year, b.rate, b.genre, b.cover_path, t.name, t.started, t.ended
+			  FROM book b
+			  INNER JOIN task t ON t.id = b.task_fk
+			  WHERE b.id = $1 
+			  AND t.user_fk = $2`
+
 	var b model.Book
 	var synopsis sql.NullString
 	var comments sql.NullString
@@ -132,7 +106,7 @@ func FindBook(id int, userId int, db *sql.DB) (model.Book, error) {
 	var coverPath sql.NullString
 	var started pq.NullTime
 	var ended pq.NullTime
-	if err := db.QueryRow(findBookSql, id, userId).Scan(&b.Id, &b.Progress, &b.Author, &synopsis, &comments, &year, &rate, &genre, &coverPath, &b.Task.Name, &started, &ended); err != nil {
+	if err := db.QueryRow(query, id, userId).Scan(&b.Id, &b.Progress, &b.Author, &synopsis, &comments, &year, &rate, &genre, &coverPath, &b.Task.Name, &started, &ended); err != nil {
 		slog.Error(err.Error())
 		return model.Book{}, err
 	}
@@ -164,8 +138,10 @@ func FindBook(id int, userId int, db *sql.DB) (model.Book, error) {
 }
 
 func FindBookCoverPath(id int, userId int, db *sql.DB) (string, error) {
+	query := "SELECT b.cover_path FROM book b INNER JOIN task t ON t.id = b.task_fk WHERE b.id = $1 AND t.user_fk = $2"
+
 	var coverPath string
-	if err := db.QueryRow(findBookCoverPathSql, id, userId).Scan(&coverPath); err != nil {
+	if err := db.QueryRow(query, id, userId).Scan(&coverPath); err != nil {
 		slog.Error(err.Error())
 		return "", err
 	}
@@ -173,6 +149,9 @@ func FindBookCoverPath(id int, userId int, db *sql.DB) (string, error) {
 }
 
 func SaveOrUpdateBook(b model.Book, filebytes []byte, userId int, db *sql.DB) (int, error) {
+	query := `INSERT INTO book (progress, author, synopsis, comments, year, genre, rate, cover_path, task_fk) 
+			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
+
 	tx, err := db.Begin()
 	if err != nil {
 		slog.Error(err.Error())
@@ -181,6 +160,10 @@ func SaveOrUpdateBook(b model.Book, filebytes []byte, userId int, db *sql.DB) (i
 	defer tx.Rollback()
 
 	if b.Id != 0 {
+		query = `UPDATE book b
+				 SET progress = $3, author = $4, synopsis = $5, comments = $6, year = $7, genre = $8, rate = $9
+				 FROM task t 
+				 WHERE t.id = b.task_fk AND b.id = $1 AND t.user_fk = $2`
 		var taskId int
 		if err := tx.QueryRow(findBookTaskIdSql, b.Id, userId).Scan(&taskId); err != nil {
 			slog.Error(err.Error())
@@ -228,9 +211,9 @@ func SaveOrUpdateBook(b model.Book, filebytes []byte, userId int, db *sql.DB) (i
 		coverPath = sql.NullString{String: fullPath, Valid: true}
 	}
 	if b.Id == 0 {
-		err = tx.QueryRow(insertBookSql, b.Progress, author, synopsis, comments, year, genre, rate, coverPath, taskId).Scan(&id)
+		err = tx.QueryRow(query, b.Progress, author, synopsis, comments, year, genre, rate, coverPath, taskId).Scan(&id)
 	} else {
-		_, err = tx.Exec(updateBookSql, b.Id, userId, b.Progress, author, synopsis, comments, year, genre, rate)
+		_, err = tx.Exec(query, b.Id, userId, b.Progress, author, synopsis, comments, year, genre, rate)
 		id = b.Id
 	}
 	if err != nil {
@@ -256,6 +239,7 @@ func SaveOrUpdateBook(b model.Book, filebytes []byte, userId int, db *sql.DB) (i
 }
 
 func UpdateBookCover(id int, coverPath string, userId int, tx *sql.Tx) error {
+	updateBookCoverSql := "UPDATE book b SET cover_path = $3 FROM task t WHERE t.id = b.task_fk AND b.id = $1 AND t.user_fk = $2"
 	_, err := tx.Exec(updateBookCoverSql, id, userId, coverPath)
 	if err != nil {
 		slog.Error(err.Error())

@@ -2,7 +2,6 @@ package database
 
 import (
 	"database/sql"
-	"fmt"
 	"log/slog"
 	"matask/internal/model"
 	"os"
@@ -11,39 +10,8 @@ import (
 	"github.com/lib/pq"
 )
 
-var findFilteredMoviesSelectSql = "SELECT m.id, t.name, m.director, m.year" // TODO: add actors
-var findFilteredMoviesSelectCountSql = "SELECT COUNT(m.id)"
-var findFilteredMoviesFromWhereSql = `
-		FROM movie m
-		INNER JOIN task t ON t.id = m.task_fk
-		WHERE ($1 = '' OR UPPER(t.name) like '%' || UPPER($1) || '%')
-		AND ($2 = '' OR UPPER(m.director) like '%' || UPPER($2) || '%' )
-		AND ($3 = '' OR UPPER(m.year) like '%' || UPPER($3) || '%' )
-		AND t.user_fk = $4
-	`
-var findFilteredMoviesOrderSql = " ORDER BY %s %s "
-var findFilteredMoviesPageSql = " OFFSET $5 LIMIT $6 "
-
-const (
-	findMovieSql = `
-		SELECT m.id, m.synopsis, m.comments, m.year, m.rate, m.director, m.actors, m.genre, m.poster_path, t.name, t.started, t.ended 
-		FROM movie m
-		INNER JOIN task t ON t.id = m.task_fk
-		WHERE m.id = $1
-		AND t.user_fk = $2
-	`
-	findMovieTaskIdSql     = "SELECT t.id FROM movie m INNER JOIN task t ON t.id = m.task_fk WHERE m.id = $1 AND t.user_fk = $2"
-	findMoviePosterPathSql = "SELECT m.poster_path FROM movie m INNER JOIN task t ON t.id = m.task_fk WHERE m.id = $1 AND t.user_fk = $2"
-	insertMovieSql         = "INSERT INTO movie (synopsis, comments, year, rate, director, genre, actors, poster_path, task_fk) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id"
-	updateMovieSql         = `
-		UPDATE movie m
-		SET synopsis = $3, comments = $4, year = $5, rate = $6, director = $7, genre = $8, actors = $9 
-		FROM task t
-		WHERE t.id = m.task_fk AND m.id = $1 AND t.user_fk = $2
-		`
-	updateMoviePosterSql = "UPDATE movie SET poster_path = $3 FROM task t WHERE WHERE t.id = m.task_fk AND m.id = $1 AND t.user_fk = $2"
-	deleteMovieSql       = "DELETE FROM movie m USING task t WHERE t.id = m.task_fk AND m.id = $1 AND t.user_fk = $2"
-)
+const findMovieTaskIdSql = "SELECT t.id FROM movie m INNER JOIN task t ON t.id = m.task_fk WHERE m.id = $1 AND t.user_fk = $2"
+const deleteMovieSql = "DELETE FROM movie m USING task t WHERE t.id = m.task_fk AND m.id = $1 AND t.user_fk = $2"
 
 var movieSortFieldMap = map[string]string{
 	"id":       "m.id",
@@ -53,16 +21,7 @@ var movieSortFieldMap = map[string]string{
 }
 
 func FindFilteredMovies(f model.MovieFilter, db *sql.DB) (model.MoviePageResult, error) {
-	sortField := movieSortFieldMap[f.SortField]
-	if sortField == "" {
-		sortField = "id"
-	}
-	sortDirection := sortDirectionMap[f.SortDirection]
-	if sortDirection == "" {
-		sortDirection = "ASC"
-	}
-	query := findFilteredMoviesSelectSql + findFilteredMoviesFromWhereSql + fmt.Sprintf(findFilteredMoviesOrderSql, sortField, sortDirection) + findFilteredMoviesPageSql
-	countQuery := findFilteredMoviesSelectCountSql + findFilteredMoviesFromWhereSql
+	query, countQuery := buildMovieFilteredQueries(f)
 
 	var count int
 	if err := db.QueryRow(countQuery, f.Name, f.Director, f.Year, f.UserId).Scan(&count); err != nil { // TODO: add actors
@@ -70,12 +29,7 @@ func FindFilteredMovies(f model.MovieFilter, db *sql.DB) (model.MoviePageResult,
 		return model.MoviePageResult{}, err
 	}
 
-	var offset int
-	if f.Page <= 1 {
-		offset = 0
-	} else {
-		offset = (f.Page - 1) * f.Size
-	}
+	offset := getOffset(f.Page, f.Size)
 
 	rows, err := db.Query(query, f.Name, f.Director, f.Year, f.UserId, offset, f.Size) // TODO: add actors
 	if err != nil {
@@ -108,17 +62,36 @@ func FindFilteredMovies(f model.MovieFilter, db *sql.DB) (model.MoviePageResult,
 		return model.MoviePageResult{}, err
 	}
 
-	totalPages := count / f.Size
-	remainder := count % f.Size
-	if totalPages == 0 || (totalPages > 0 && remainder > 0) {
-		totalPages++
-	}
+	totalPages := calculateTotalPages(count, f.Size)
 
 	pageResult := model.MoviePageResult{Movies: movies, Page: f.Page, Size: f.Size, TotalPages: totalPages, TotalElements: count}
 	return pageResult, nil
 }
 
+func buildMovieFilteredQueries(f model.MovieFilter) (string, string) {
+	selectQuery := "SELECT m.id, t.name, m.director, m.year" // TODO: add actors
+	selectCount := "SELECT COUNT(m.id)"
+	from := `  		FROM movie m
+					INNER JOIN task t ON t.id = m.task_fk
+					WHERE ($1 = '' OR UPPER(t.name) like '%' || UPPER($1) || '%')
+					AND ($2 = '' OR UPPER(m.director) like '%' || UPPER($2) || '%' )
+					AND ($3 = '' OR UPPER(m.year) like '%' || UPPER($3) || '%' )
+					AND t.user_fk = $4`
+	order := getOrderQuery(f.SortField, f.SortDirection, movieSortFieldMap)
+	offsetLimit := "OFFSET $5 LIMIT $6 "
+
+	query := selectQuery + from + order + offsetLimit
+	countQuery := selectCount + from
+
+	return query, countQuery
+}
+
 func FindMovie(id int, userId int, db *sql.DB) (model.Movie, error) {
+	query := `SELECT m.id, m.synopsis, m.comments, m.year, m.rate, m.director, m.actors, m.genre, m.poster_path, t.name, t.started, t.ended 
+			FROM movie m
+			INNER JOIN task t ON t.id = m.task_fk
+			WHERE m.id = $1
+			AND t.user_fk = $2`
 	var m model.Movie
 	var synopsis sql.NullString
 	var comments sql.NullString
@@ -129,7 +102,7 @@ func FindMovie(id int, userId int, db *sql.DB) (model.Movie, error) {
 	var posterPath sql.NullString
 	var started pq.NullTime
 	var ended pq.NullTime
-	if err := db.QueryRow(findMovieSql, id, userId).Scan(&m.Id, &synopsis, &comments, &year, &rate, &director, &m.Actors, &genre, &posterPath, &m.Task.Name, &started, &ended); err != nil {
+	if err := db.QueryRow(query, id, userId).Scan(&m.Id, &synopsis, &comments, &year, &rate, &director, &m.Actors, &genre, &posterPath, &m.Task.Name, &started, &ended); err != nil {
 		slog.Error(err.Error())
 		return model.Movie{}, err
 	}
@@ -164,8 +137,9 @@ func FindMovie(id int, userId int, db *sql.DB) (model.Movie, error) {
 }
 
 func FindMoviePosterPath(id int, userId int, db *sql.DB) (string, error) {
+	query := "SELECT m.poster_path FROM movie m INNER JOIN task t ON t.id = m.task_fk WHERE m.id = $1 AND t.user_fk = $2"
 	var posterPath string
-	if err := db.QueryRow(findMoviePosterPathSql, id, userId).Scan(&posterPath); err != nil {
+	if err := db.QueryRow(query, id, userId).Scan(&posterPath); err != nil {
 		slog.Error(err.Error())
 		return "", err
 	}
@@ -173,6 +147,9 @@ func FindMoviePosterPath(id int, userId int, db *sql.DB) (string, error) {
 }
 
 func SaveOrUpdateMovie(m model.Movie, filebytes []byte, userId int, db *sql.DB) (int, error) {
+	query := `INSERT INTO movie (synopsis, comments, year, rate, director, genre, actors, poster_path, task_fk) 
+			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
+
 	tx, err := db.Begin()
 	if err != nil {
 		slog.Error(err.Error())
@@ -181,6 +158,10 @@ func SaveOrUpdateMovie(m model.Movie, filebytes []byte, userId int, db *sql.DB) 
 	defer tx.Rollback()
 
 	if m.Id != 0 {
+		query = `UPDATE movie m 
+				 SET synopsis = $3, comments = $4, year = $5, rate = $6, director = $7, genre = $8, actors = $9 
+				 FROM task t 
+				 WHERE t.id = m.task_fk AND m.id = $1 AND t.user_fk = $2`
 		var taskId int
 		if err := tx.QueryRow(findMovieTaskIdSql, m.Id, userId).Scan(&taskId); err != nil {
 			slog.Error(err.Error())
@@ -229,9 +210,9 @@ func SaveOrUpdateMovie(m model.Movie, filebytes []byte, userId int, db *sql.DB) 
 	}
 
 	if m.Id == 0 {
-		err = tx.QueryRow(insertMovieSql, synopsis, comments, year, rate, director, genre, m.Actors, posterPath, taskId).Scan(&id)
+		err = tx.QueryRow(query, synopsis, comments, year, rate, director, genre, m.Actors, posterPath, taskId).Scan(&id)
 	} else {
-		_, err = tx.Exec(updateMovieSql, m.Id, userId, synopsis, comments, year, rate, director, genre, m.Actors)
+		_, err = tx.Exec(query, m.Id, userId, synopsis, comments, year, rate, director, genre, m.Actors)
 		id = m.Id
 	}
 	if err != nil {
@@ -257,6 +238,7 @@ func SaveOrUpdateMovie(m model.Movie, filebytes []byte, userId int, db *sql.DB) 
 }
 
 func UpdateMoviePoster(id int, posterPath string, userId int, tx *sql.Tx) error {
+	updateMoviePosterSql := "UPDATE movie SET poster_path = $3 FROM task t WHERE WHERE t.id = m.task_fk AND m.id = $1 AND t.user_fk = $2"
 	_, err := tx.Exec(updateMoviePosterSql, id, posterPath, userId)
 	if err != nil {
 		slog.Error(err.Error())
