@@ -56,50 +56,35 @@ func LoginHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		return
 	}
 
-	token, err := service.GenerateToken(creds.Username)
+	tokenCookie, err := service.GenerateTokenCookie(creds.Username)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	http.SetCookie(w, tokenCookie)
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "token",
-		Value:    token,
-		Path:     "/",
-		Expires:  time.Now().Add(60 * time.Minute),
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-	})
-
-	refreshToken, err := service.GenerateRefreshToken()
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	fmt.Printf("keep? %v.\n", creds.KeepLoggedIn)
+	if creds.KeepLoggedIn {
+		refreshCookie, err := service.GenerateRefreshCookie(creds.Username, db)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		http.SetCookie(w, refreshCookie)
 	}
-	service.UpsertRefreshToken(refreshToken, creds.Username, db)
-	http.SetCookie(w, &http.Cookie{
-		Name:     "refresh",
-		Value:    refreshToken,
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-	})
 
 	json.NewEncoder(w).Encode(resource.UserResource{Username: creds.Username})
 }
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     "token",
-		Value:    "",
-		Expires:  time.Now(),
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-	})
+	http.SetCookie(w, service.GenerateCookie(service.TOKEN_COOKIE_NAME, "", time.Unix(0, 1)))
+	http.SetCookie(w, service.GenerateCookie(service.REFRESH_COOKIE_NAME, "", time.Unix(0, 1)))
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Logged out successfully"))
 }
 
 func RefreshHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	refreshCookie, err := r.Cookie("refresh")
+	refreshCookie, err := r.Cookie(service.REFRESH_COOKIE_NAME)
 	if err != nil {
 		slog.Error(err.Error())
 		w.WriteHeader(http.StatusUnauthorized)
@@ -108,38 +93,23 @@ func RefreshHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	username, err := service.FindUsernameByRefreshToken(refreshCookie.Value, db)
 	if err != nil {
-		slog.Error(err.Error())
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
-	token, err := service.GenerateToken(username)
+	tokenCookie, err := service.GenerateTokenCookie(username)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	http.SetCookie(w, &http.Cookie{
-		Name:     "token",
-		Value:    token,
-		Path:     "/",
-		Expires:  time.Now().Add(60 * time.Minute),
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-	})
+	http.SetCookie(w, tokenCookie)
 
-	refreshToken, err := service.GenerateRefreshToken()
+	refreshCookie, err = service.GenerateRefreshCookie(username, db)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	service.UpsertRefreshToken(refreshToken, username, db)
-	http.SetCookie(w, &http.Cookie{
-		Name:     "refresh",
-		Value:    refreshToken,
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-	})
+	http.SetCookie(w, refreshCookie)
 
 	json.NewEncoder(w).Encode(resource.UserResource{Username: username})
 }

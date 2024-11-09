@@ -11,7 +11,7 @@ import (
 
 func Auth(next MataskHandler) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tokenCookie, err := r.Cookie("token")
+		tokenCookie, err := r.Cookie(service.TOKEN_COOKIE_NAME)
 		if err != nil {
 			slog.Error(err.Error())
 			w.WriteHeader(http.StatusUnauthorized)

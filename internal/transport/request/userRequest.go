@@ -3,8 +3,9 @@ package request
 import "matask/internal/model"
 
 type CredentialsRequest struct {
-	Username string
-	Password string
+	Username     string
+	Password     string
+	KeepLoggedIn bool
 }
 
 type UserRequest struct {
