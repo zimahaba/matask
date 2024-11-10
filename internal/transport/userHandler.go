@@ -10,7 +10,6 @@ import (
 	"matask/internal/transport/request"
 	"matask/internal/transport/resource"
 	"net/http"
-	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -63,7 +62,6 @@ func LoginHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 	http.SetCookie(w, tokenCookie)
 
-	fmt.Printf("keep? %v.\n", creds.KeepLoggedIn)
 	if creds.KeepLoggedIn {
 		refreshCookie, err := service.GenerateRefreshCookie(creds.Username, db)
 		if err != nil {
@@ -77,8 +75,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 }
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	http.SetCookie(w, service.GenerateCookie(service.TOKEN_COOKIE_NAME, "", time.Unix(0, 1)))
-	http.SetCookie(w, service.GenerateCookie(service.REFRESH_COOKIE_NAME, "", time.Unix(0, 1)))
+	http.SetCookie(w, service.GenerateCookie(service.TOKEN_COOKIE_NAME, "", -1))
+	http.SetCookie(w, service.GenerateCookie(service.REFRESH_COOKIE_NAME, "", -1))
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Logged out successfully"))
 }

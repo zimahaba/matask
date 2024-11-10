@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"log/slog"
+	"math"
 	"net/http"
 	"os"
 	"time"
@@ -21,7 +22,7 @@ const (
 	TOKEN_COOKIE_NAME   = "token"
 	REFRESH_COOKIE_NAME = "refresh"
 	tokenExpiration     = 60 * time.Minute
-	cookieExpiration    = 10 * time.Second
+	cookieExpiration    = 86400 // seconds
 )
 
 var JwtKey = []byte(os.Getenv("JWT_KEY"))
@@ -33,7 +34,7 @@ func GenerateTokenCookie(username string) (*http.Cookie, error) {
 		return &http.Cookie{}, err
 	}
 
-	return GenerateCookie(TOKEN_COOKIE_NAME, token, time.Now().Add(cookieExpiration)), nil
+	return GenerateCookie(TOKEN_COOKIE_NAME, token, cookieExpiration), nil
 }
 
 func GenerateRefreshCookie(username string, db *sql.DB) (*http.Cookie, error) {
@@ -49,23 +50,18 @@ func GenerateRefreshCookie(username string, db *sql.DB) (*http.Cookie, error) {
 		return &http.Cookie{}, err
 	}
 
-	return GenerateCookie(REFRESH_COOKIE_NAME, refreshToken, time.Time{}), nil
+	return GenerateCookie(REFRESH_COOKIE_NAME, refreshToken, math.MaxInt32), nil
 }
 
-func GenerateCookie(name string, value string, expires time.Time) *http.Cookie {
-	c := &http.Cookie{
+func GenerateCookie(name string, value string, maxAge int) *http.Cookie {
+	return &http.Cookie{
 		Name:     name,
 		Value:    value,
 		Path:     "/",
 		HttpOnly: true,
+		MaxAge:   maxAge,
 		SameSite: http.SameSiteStrictMode,
 	}
-
-	if !expires.IsZero() {
-		c.Expires = expires
-	}
-
-	return c
 }
 
 func generateToken(username string) (string, error) {
