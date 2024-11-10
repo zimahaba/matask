@@ -11,3 +11,10 @@ services:
       POSTGRES_DB: matask
     ports:
       - "5432:5432"
+
+  redis:
+    image: redis:7.4.1
+    ports:
+      - "6379:6379"
+    environment:
+    - REDIS_PASSWORD=matask

@@ -13,6 +13,7 @@ import (
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 	"github.com/rs/cors"
 )
 
@@ -47,6 +48,7 @@ func getLogLevel() slog.Level {
 func main() {
 	loadEnv()
 	db := connectDB()
+	redis := NewRedisClient()
 	defer db.Close()
 
 	slog.SetLogLoggerLevel(getLogLevel())
@@ -57,7 +59,10 @@ func main() {
 	mux.HandleFunc("POST /auth/login", insecured(handler.MataskHandler{DB: db, F: transport.LoginHandler}))
 	mux.HandleFunc("POST /auth/logout", transport.LogoutHandler)
 	mux.HandleFunc("POST /auth/refresh", insecured(handler.MataskHandler{DB: db, F: transport.RefreshHandler}))
-	mux.HandleFunc("GET /auth/userinfo", secured(handler.MataskHandler{DB: db, F: transport.AuthCheckHandler}))
+	mux.HandleFunc("POST /auth/forgot", insecured(handler.MataskTTLHandler{DB: db, Redis: redis, F: transport.ForgotPasswordHandler}))
+	mux.HandleFunc("GET /auth/recover", insecured(handler.MataskTTLHandler{DB: db, Redis: redis, F: transport.RecoverPasswordHandler}))
+
+	mux.HandleFunc("GET /auth/userinfo", secured(handler.MataskHandler{DB: db, F: transport.UserInfoHandler}))
 
 	mux.HandleFunc("GET /projects", secured(handler.MataskHandler{DB: db, F: transport.GetFilteredProjectsHandler}))
 	mux.HandleFunc("GET /projects/{id}", secured(handler.MataskHandler{DB: db, F: transport.GetProjectHandler}))
@@ -111,7 +116,7 @@ func secured(h handler.MataskHandler) http.HandlerFunc {
 	return handler.Auth(h)
 }
 
-func insecured(h handler.MataskHandler) http.HandlerFunc {
+func insecured(h http.Handler) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h.ServeHTTP(w, r)
 	})
@@ -140,4 +145,13 @@ func connectDB() *sql.DB {
 
 	fmt.Println("Successfully connected to database")
 	return db
+}
+
+func NewRedisClient() *redis.Client {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379", // Redis server address
+		Password: "matask",         // No password set
+		DB:       0,                // Use default DB
+	})
+	return rdb
 }

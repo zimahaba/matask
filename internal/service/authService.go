@@ -38,7 +38,7 @@ func GenerateTokenCookie(username string) (*http.Cookie, error) {
 }
 
 func GenerateRefreshCookie(username string, db *sql.DB) (*http.Cookie, error) {
-	refreshToken, err := generateRefreshToken()
+	refreshToken, err := GenerateRandomToken()
 	if err != nil {
 		slog.Error(err.Error())
 		return &http.Cookie{}, err
@@ -76,7 +76,7 @@ func generateToken(username string) (string, error) {
 	return token.SignedString(JwtKey)
 }
 
-func generateRefreshToken() (string, error) {
+func GenerateRandomToken() (string, error) {
 	token := make([]byte, 32)
 	_, err := rand.Read(token)
 	if err != nil {
