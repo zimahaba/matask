@@ -14,10 +14,10 @@ import (
 	"strconv"
 )
 
-func GetTasksHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func GetFilteredTasksHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	filter := request.ToTaskFilter(r.URL.Query())
 	filter.UserId = r.Context().Value(handler.UserIdKey).(int)
-	result, err := service.FindTasks(filter, db)
+	result, err := service.FindFilteredTasks(filter, db)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

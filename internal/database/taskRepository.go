@@ -20,7 +20,7 @@ var taskSortFieldMap = map[string]string{
 	"name": "t.name",
 }
 
-func FindTasks(f model.TaskFilter, db *sql.DB) (model.TaskPageResult, error) {
+func FindFilteredTasks(f model.TaskFilter, db *sql.DB) (model.TaskPageResult, error) {
 	query, countQuery := buildTaskFilteredQueries(f)
 
 	var count int

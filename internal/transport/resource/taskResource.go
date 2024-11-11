@@ -12,11 +12,11 @@ type TaskResource struct {
 }
 
 type TaskPageResource struct {
-	Tasks         []TaskResource
-	Page          int
-	Size          int
-	TotalPages    int
-	TotalElements int
+	Tasks         []TaskResource `json:"tasks"`
+	Page          int            `json:"page"`
+	Size          int            `json:"size"`
+	TotalPages    int            `json:"totalPages"`
+	TotalElements int            `json:"totalElements"`
 }
 
 func FromTaskPageResult(result model.TaskPageResult) TaskPageResource {
